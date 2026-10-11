@@ -1,0 +1,19 @@
+# Backend
+backend/build/
+backend/.gradle/
+backend/data/
+*.env
+.env
+!.env.example
+
+# Web
+web/node_modules/
+web/.next/
+web/out/
+web/*.tsbuildinfo
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
