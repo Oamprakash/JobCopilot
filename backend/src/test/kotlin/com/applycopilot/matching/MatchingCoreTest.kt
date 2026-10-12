@@ -194,4 +194,28 @@ class MatchingCoreTest {
         assertEquals("Backend Engineer", Suggestions.roleFamily("Senior Backend Engineer"))
         assertEquals("Engineering Manager", Suggestions.roleFamily("Engineering Manager - Platform"))
     }
+
+    @Test
+    fun autocompleteCountsJobsTheFilterWouldLetThrough() {
+        val jobs = listOf(
+            OpenJob("Senior Android Engineer", "Bangalore, KA"),
+            OpenJob("Mobile Developer (iOS)", "Bengaluru"),
+            OpenJob("Backend Engineer", "Chennai, India"),
+            OpenJob("Account Executive", "Mumbai"),
+        )
+        val options = Autocomplete.options(jobs)
+        val city = options.locations.associate { it.value to it.count }
+        assertEquals(2, city["Bengaluru"])
+        assertEquals(1, city["Chennai"])
+        assertEquals(0, city["Pune"])
+        assertEquals("Bengaluru", options.locations.first().value)
+        assertEquals(Locations.cities.size, options.locations.size)
+        assertEquals(listOf("Bangalore", "Blr"), options.locations.first().aliases)
+
+        val role = options.roles.associate { it.value to it.count }
+        assertEquals(2, role["Android Engineer"]) // android → mobile synonym, as in HardFilter
+        assertEquals(1, role["Backend Engineer"])
+        assertEquals(0, role["Data Engineer"])
+        assertTrue(options.roles.zipWithNext().all { (a, b) -> a.count >= b.count })
+    }
 }

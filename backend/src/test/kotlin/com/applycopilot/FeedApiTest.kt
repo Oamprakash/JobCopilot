@@ -15,6 +15,7 @@ import com.applycopilot.core.Preferences
 import com.applycopilot.core.RemoteMode
 import com.applycopilot.db.Companies
 import com.applycopilot.jobs.BoardFixtures
+import com.applycopilot.matching.AutocompleteOptions
 import com.applycopilot.matching.Suggestion
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -291,5 +292,17 @@ class FeedApiTest {
         }
         assertEquals(HttpStatusCode.BadRequest, badAts.status)
         assertEquals(HttpStatusCode.OK, admin.post("/admin/ingest").status)
+    }
+
+    @Test
+    fun autocompleteOffersCitiesAndRolesWithCounts() = withApp { deps ->
+        assertEquals(HttpStatusCode.Unauthorized, newClient().get("/autocomplete").status)
+        deps.ingestion.syncAll()
+        val client = newClient().also { it.signIn("oam@example.com") }
+        val options = client.get("/autocomplete").body<AutocompleteOptions>()
+        val city = options.locations.associate { it.value to it.count }
+        assertTrue((city["Bengaluru"] ?: 0) >= 1)
+        assertTrue((city["Chennai"] ?: 0) >= 1)
+        assertTrue(options.roles.first { it.value == "Android Engineer" }.count >= 2)
     }
 }

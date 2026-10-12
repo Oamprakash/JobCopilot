@@ -8,6 +8,7 @@ import com.applycopilot.config.AppConfig
 import com.applycopilot.db.Db
 import com.applycopilot.jobs.AtsClient
 import com.applycopilot.jobs.IngestionService
+import com.applycopilot.matching.AutocompleteService
 import com.applycopilot.matching.ClaudeJobScorer
 import com.applycopilot.matching.MatchingService
 import com.applycopilot.resume.ClaudeResumeParser
@@ -33,6 +34,7 @@ class Deps(
     val tailor: TailorService,
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
+    val autocomplete = AutocompleteService(db)
 
     override fun close() = onClose.forEach { runCatching { it.close() } }
 

@@ -1,6 +1,8 @@
 "use client";
 
-import type { Preferences, RemoteMode } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { api, type AutocompleteOptions, type Preferences, type RemoteMode } from "@/lib/api";
+import { fallbackOptions } from "@/lib/autocomplete";
 import { ChipInput } from "./ChipInput";
 import { NumberField } from "./NumberField";
 
@@ -13,11 +15,21 @@ const remoteOptions: { value: RemoteMode; label: string }[] = [
 
 export function PreferencesForm({ value, onChange }: { value: Preferences; onChange: (p: Preferences) => void }) {
   const set = <K extends keyof Preferences>(key: K, v: Preferences[K]) => onChange({ ...value, [key]: v });
+  const [options, setOptions] = useState<AutocompleteOptions>(fallbackOptions);
+
+  // Live options carry open-job counts; the built-in lists cover the wait and any failure.
+  useEffect(() => {
+    let cancelled = false;
+    api.autocomplete().then((o) => !cancelled && setOptions(o)).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="stack">
-      <ChipInput label="Target roles" values={value.roles} onChange={(v) => set("roles", v)} placeholder="e.g. Senior Android Engineer" />
-      <ChipInput label="Locations" values={value.locations} onChange={(v) => set("locations", v)} placeholder="e.g. Chennai" />
+      <ChipInput label="Target roles" values={value.roles} onChange={(v) => set("roles", v)} placeholder="e.g. Senior Android Engineer" suggestions={options.roles} />
+      <ChipInput label="Locations" values={value.locations} onChange={(v) => set("locations", v)} placeholder="e.g. Chennai" suggestions={options.locations} />
       <label className="field">
         Work mode
         <select className="select" value={value.remoteMode} onChange={(e) => set("remoteMode", e.target.value as RemoteMode)}>

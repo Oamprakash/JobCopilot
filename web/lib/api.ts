@@ -138,6 +138,10 @@ export type ApplicationView = {
   approvedAt: string | null;
 };
 
+/** A value to suggest while typing; count is how many open jobs it matches (null when unknown). Aliases also find it. */
+export type AutocompleteOption = { value: string; count: number | null; aliases?: string[] };
+export type AutocompleteOptions = { locations: AutocompleteOption[]; roles: AutocompleteOption[] };
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -204,6 +208,8 @@ export const api = {
   approveApplication: (jobId: string) => request<ApplicationView>(`/applications/${jobId}/approve`, { method: "POST" }),
   resumePdfUrl: (jobId: string) => `/api/applications/${jobId}/resume.pdf`,
   usage: () => request<Usage>("/usage"),
+
+  autocomplete: () => request<AutocompleteOptions>("/autocomplete"),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>

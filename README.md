@@ -18,7 +18,7 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 | Parsing | Claude (forced tool call → profile JSON) when `ANTHROPIC_API_KEY` is set; a rule-based parser otherwise, or if the API call fails. |
 | "Never invent" guardrail | Every parsed name, title, company, institution, skill, bullet, email, phone and link is checked against the resume text. Anything not found is removed and listed on the review screen. |
 | Master profile | Upload alone saves nothing. The user confirms the fields, and each save creates a new version. |
-| Preferences | Roles, locations, work mode, min CTC, notice period, companies to skip. |
+| Preferences | Roles, locations, work mode, min CTC, notice period, companies to skip. Roles and locations suggest values while you type (↑/↓, Enter, Escape), with how many open jobs each would match; cities also match old names such as Bangalore or Gurgaon. |
 | Account deletion | One step: removes the user, every profile version, preferences and uploaded files. |
 
 ## What works in Phase 2
@@ -92,6 +92,7 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | GET | `/profile` | latest version → `{version, profile, resumeFile, updatedAt}` |
 | PUT | `/profile` | `{profile, resumeFileId?}` → new version |
 | GET/PUT | `/preferences` | preferences object |
+| GET | `/autocomplete` | `{locations, roles}`: `[{value, count, aliases}]`, counts from open jobs (cached 10 min) |
 | GET | `/feed?status=new\|saved\|skipped` | `{jobs, lastRun, needsRefresh}` |
 | POST | `/feed/refresh` | rebuilds the feed (throttled to once per 2 min unless inputs changed) |
 | PUT | `/feed/{jobId}/status` | `{status}` |

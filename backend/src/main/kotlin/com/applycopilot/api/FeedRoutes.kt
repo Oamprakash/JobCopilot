@@ -138,6 +138,12 @@ private suspend fun feedResponse(deps: Deps, userId: UUID, status: String): Feed
 
 /** The daily feed. Mount inside authenticate("session"). */
 fun Route.feedRoutes(deps: Deps) {
+    // Locations and roles to suggest while the user types preferences, with open-job counts.
+    get("/autocomplete") {
+        call.userId()
+        call.respond(deps.autocomplete.options())
+    }
+
     get("/feed") {
         val status = call.request.queryParameters["status"] ?: "new"
         if (status !in setOf("new", "saved", "skipped")) throw ApiException(HttpStatusCode.BadRequest, "Unknown status")
@@ -205,7 +211,9 @@ fun Route.adminRoutes(deps: Deps) {
             val name = request.name.trim().take(120).ifEmpty { throw ApiException(HttpStatusCode.BadRequest, "Name is required") }
             val company = deps.db.tx { c -> Companies.insert(c, name, ats.id, token) }
                 ?: throw ApiException(HttpStatusCode.Conflict, "That board is already registered")
-            call.respond(deps.ingestion.sync(company).toDto())
+            val result = deps.ingestion.sync(company)
+            deps.autocomplete.invalidate()
+            call.respond(result.toDto())
         }
 
         put("/companies/{id}/active") {
@@ -220,7 +228,9 @@ fun Route.adminRoutes(deps: Deps) {
         post("/ingest") {
             call.requireSameOrigin(deps.config)
             call.requireAdmin(deps)
-            call.respond(deps.ingestion.syncAll().map { it.toDto() })
+            val results = deps.ingestion.syncAll()
+            deps.autocomplete.invalidate()
+            call.respond(results.map { it.toDto() })
         }
     }
 }

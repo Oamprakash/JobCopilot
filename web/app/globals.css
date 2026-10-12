@@ -85,6 +85,20 @@ h2 { font-size: 16px; margin: 0; }
 .chip button:hover { background: rgba(31, 79, 224, 0.12); }
 .chip-input { flex: 1 1 140px; min-width: 120px; }
 
+.combo { position: relative; }
+.combo-list {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(20, 33, 61, 0.12); max-height: 296px; overflow-y: auto; font-weight: 400;
+}
+.combo-list[hidden] { display: none; }
+.combo-option {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; padding: 8px 10px;
+  border-radius: 6px; font-size: 14px; color: var(--ink); cursor: pointer;
+}
+.combo-option[aria-selected="true"] { background: var(--primary-soft); color: var(--primary); }
+.combo-count { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 .notice { padding: 12px 14px; border-radius: var(--radius-sm); font-size: 14px; }
 .notice-good { background: var(--good-soft); color: var(--good); }
 .notice-warn { background: var(--warn-soft); color: var(--warn); }

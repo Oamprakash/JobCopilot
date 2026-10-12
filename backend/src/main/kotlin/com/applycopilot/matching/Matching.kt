@@ -50,11 +50,19 @@ object Locations {
 
     private fun has(text: String, word: String) = Regex("(?<![a-z])${Regex.escape(word)}(?![a-z])").containsMatchIn(text)
 
+    private fun displayName(group: Set<String>) = group.first().split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+
+    /** Every Indian city the filter knows by name, as display names. */
+    val cities: List<String> get() = aliasGroups.map(::displayName)
+
+    /** Other names the filter accepts for a city ("Bengaluru" → ["Bangalore", "Blr"]). */
+    fun aliasesOf(city: String): List<String> =
+        aliasGroups.firstOrNull { displayName(it) == city }?.drop(1)?.map { a -> displayName(setOf(a)) }.orEmpty()
+
     /** Indian cities named in a job location, as display names ("Bangalore, KA" → ["Bengaluru"]). */
     fun citiesIn(location: String): List<String> {
         val l = location.lowercase()
-        return aliasGroups.filter { group -> group.any { has(l, it) } }
-            .map { group -> group.first().split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } } }
+        return aliasGroups.filter { group -> group.any { has(l, it) } }.map(::displayName)
     }
 
     fun mentionsIndia(location: String): Boolean = location.lowercase().let { l -> indiaWords.any { has(l, it) } }

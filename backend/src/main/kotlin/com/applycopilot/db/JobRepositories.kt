@@ -3,6 +3,7 @@ package com.applycopilot.db
 import com.applycopilot.jobs.JobPosting
 import com.applycopilot.matching.FitScore
 import com.applycopilot.matching.JobForMatching
+import com.applycopilot.matching.OpenJob
 import com.applycopilot.matching.Suggestion
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -174,6 +175,19 @@ object Jobs {
                     )
                 }
             }
+        }
+
+    /** Title and location of every job a feed could show (open, active board, posted in the last 60 days). */
+    fun openTitlesAndLocations(c: Connection): List<OpenJob> =
+        c.prepareStatement(
+            """
+            SELECT j.title, j.location
+            FROM jobs j JOIN companies co ON co.id = j.company_id
+            WHERE j.closed_at IS NULL AND co.active
+              AND (j.posted_at IS NULL OR j.posted_at > now() - interval '60 days')
+            """.trimIndent(),
+        ).use { st ->
+            st.executeQuery().use { rs -> buildList { while (rs.next()) add(OpenJob(rs.getString(1), rs.getString(2))) } }
         }
 
     fun find(c: Connection, id: UUID): JobDetail? =
