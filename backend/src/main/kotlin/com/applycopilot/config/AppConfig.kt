@@ -56,14 +56,16 @@ data class AppConfig(
             }
             if (appEnv == "prod") requireNotNull(mail) { "RESEND_API_KEY is required in prod so magic links can be emailed" }
 
+            val db = database(env)
             return AppConfig(
                 env = appEnv,
-                port = env["PORT"]?.toInt() ?: 8080,
-                databaseUrl = env["DATABASE_URL"] ?: "jdbc:postgresql://localhost:5432/applycopilot",
-                databaseUser = env["DATABASE_USER"] ?: "applycopilot",
-                databasePassword = env["DATABASE_PASSWORD"] ?: "applycopilot",
+                port = (env["API_PORT"] ?: env["PORT"])?.toInt() ?: 8080,
+                databaseUrl = db.first,
+                databaseUser = db.second,
+                databasePassword = db.third,
                 jwtSecret = jwtSecret,
-                webBaseUrl = (env["WEB_BASE_URL"] ?: "http://localhost:3000").trimEnd('/'),
+                // On Render, RENDER_EXTERNAL_URL is the service's public https address.
+                webBaseUrl = (env["WEB_BASE_URL"]?.takeIf { it.isNotBlank() } ?: env["RENDER_EXTERNAL_URL"] ?: "http://localhost:3000").trimEnd('/'),
                 anthropicApiKey = env["ANTHROPIC_API_KEY"]?.takeIf { it.isNotBlank() },
                 claudeModel = env["CLAUDE_MODEL"] ?: "claude-sonnet-5-5",
                 storageDir = env["STORAGE_DIR"] ?: "./data/uploads",
@@ -79,6 +81,31 @@ data class AppConfig(
                 publicPreview = env["PUBLIC_PREVIEW"]?.toBoolean() ?: false,
                 inviteEmails = env["INVITE_EMAILS"].orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet(),
                 eventRetentionDays = (env["EVENT_RETENTION_DAYS"]?.toInt() ?: 180).coerceAtLeast(1),
+            )
+        }
+
+        /**
+         * JDBC URL, user and password. DATABASE_URL may be a JDBC URL (user and password then come from
+         * DATABASE_USER / DATABASE_PASSWORD) or a postgres://user:password@host:port/db URL as hosts like Render give.
+         */
+        internal fun database(env: Map<String, String>): Triple<String, String, String> {
+            val raw = env["DATABASE_URL"]?.trim().orEmpty()
+            if (raw.startsWith("postgres://") || raw.startsWith("postgresql://")) {
+                val uri = java.net.URI(raw)
+                val (user, password) = (uri.rawUserInfo ?: "").split(":", limit = 2).map { java.net.URLDecoder.decode(it, Charsets.UTF_8) }
+                    .let { it.getOrElse(0) { "" } to it.getOrElse(1) { "" } }
+                val port = if (uri.port == -1) 5432 else uri.port
+                val query = uri.rawQuery?.let { "?$it" }.orEmpty()
+                return Triple(
+                    "jdbc:postgresql://${uri.host}:$port${uri.rawPath}$query",
+                    env["DATABASE_USER"]?.takeIf { it.isNotBlank() } ?: user,
+                    env["DATABASE_PASSWORD"]?.takeIf { it.isNotBlank() } ?: password,
+                )
+            }
+            return Triple(
+                raw.ifEmpty { "jdbc:postgresql://localhost:5432/applycopilot" },
+                env["DATABASE_USER"] ?: "applycopilot",
+                env["DATABASE_PASSWORD"] ?: "applycopilot",
             )
         }
 

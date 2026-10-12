@@ -63,6 +63,12 @@ object Companies {
             st.executeUpdate() > 0
         }
 
+    /** When any board last synced successfully, or null if none has. */
+    fun lastSyncedAt(c: Connection): Instant? =
+        c.prepareStatement("SELECT max(last_synced_at) FROM companies").use { st ->
+            st.executeQuery().use { rs -> if (rs.next()) rs.getTimestamp(1)?.toInstant() else null }
+        }
+
     fun recordSuccess(c: Connection, id: UUID) {
         c.prepareStatement(
             """

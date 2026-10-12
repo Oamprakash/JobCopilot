@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/.gradle
+backend/build
+backend/data
+**/.env
+**/.env.*
+!**/.env.example
+.git

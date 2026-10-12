@@ -1,6 +1,7 @@
 package com.applycopilot.jobs
 
 import com.applycopilot.db.Events
+import com.applycopilot.db.Companies
 import com.applycopilot.db.Db
 import com.applycopilot.db.MatchRuns
 import com.applycopilot.matching.MatchingService
@@ -25,7 +26,13 @@ class Scheduler(
     private val log = LoggerFactory.getLogger(Scheduler::class.java)
 
     fun start(scope: CoroutineScope): Job = scope.launch {
-        delay(firstRunDelay.toMillis())
+        // A host that sleeps when idle (Render's free tier) restarts the app often; don't resync every wake-up
+        // if the last sync is still within the interval.
+        val last = runCatching { db.tx { Companies.lastSyncedAt(it) } }.getOrNull()
+        val due = last?.plus(interval)
+        val wait = if (due == null) firstRunDelay else maxOf(firstRunDelay, Duration.between(java.time.Instant.now(), due))
+        if (wait > firstRunDelay) log.info("Next scheduled sync in {} min", wait.toMinutes())
+        delay(wait.toMillis())
         while (isActive) {
             runOnce()
             delay(interval.toMillis())

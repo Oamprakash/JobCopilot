@@ -52,3 +52,42 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
+
+  # The Render image: build it, start it within the free plan's 512 MB, and check both halves answer.
+  deploy-image:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: applycopilot
+          POSTGRES_USER: applycopilot
+          POSTGRES_PASSWORD: applycopilot
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U applycopilot" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/render.Dockerfile -t jobcopilot .
+      - name: Start the container
+        run: |
+          docker run -d --name app --network host --memory 512m \
+            -e PORT=10000 -e APP_ENV=preview -e PUBLIC_PREVIEW=true -e SCHEDULER_ENABLED=false \
+            -e RENDER_EXTERNAL_URL=http://localhost:10000 \
+            -e DATABASE_URL=postgresql://applycopilot:applycopilot@127.0.0.1:5432/applycopilot \
+            -e JWT_SECRET=ci-only-secret-ci-only-secret-ci-only-secret \
+            -e ADMIN_EMAILS=admin@example.com \
+            jobcopilot
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 90); do curl -fsS http://localhost:10000/api/health && break; sleep 2; done
+          curl -fsS http://localhost:10000/api/health | grep -q ok
+          curl -fsS http://localhost:10000/login | grep -q "Apply Copilot"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
+            -H 'Content-Type: application/json' -H 'Origin: http://localhost:10000' -d '{"email":"friend@example.com"}')
+          test "$code" = 200
+          mem=$(docker stats --no-stream --format '{{.MemUsage}}' app)
+          echo "::notice title=Render image::Started and answered; memory $mem"
+      - name: Container logs
+        if: always()
+        run: docker logs app 2>&1 | tail -80
