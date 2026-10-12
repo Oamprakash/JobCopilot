@@ -56,6 +56,7 @@ data class MatchRunDto(
     val scored: Int,
     val llmScored: Int,
     val error: String?,
+    val filtered: Map<String, Int> = emptyMap(),
 )
 
 @Serializable
@@ -114,7 +115,7 @@ private fun FeedRow.toDto() = FeedJobDto(
     closed = job.closed,
 )
 
-private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error)
+private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error, filtered)
 
 private fun Company.toDto() = CompanyDto(id.toString(), name, ats, boardToken, active, lastSyncedAt?.toString(), lastError, openJobs)
 

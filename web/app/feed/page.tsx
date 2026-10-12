@@ -223,6 +223,7 @@ function EmptyState({ status, feed }: { status: MatchStatus; feed: Feed }) {
   if (status === "saved") return <div className="card muted">Jobs you save show up here.</div>;
   if (status === "skipped") return <div className="card muted">Jobs you skip show up here, in case you change your mind.</div>;
   const run = feed.lastRun;
+  const reasons = run ? filterSummary(run.filtered) : [];
   return (
     <div className="card stack" style={{ gap: 8 }}>
       <h2>No new matches right now</h2>
@@ -230,11 +231,39 @@ function EmptyState({ status, feed }: { status: MatchStatus; feed: Feed }) {
         {run && run.considered === 0
           ? "There are no new open jobs to check yet. Job boards sync every day."
           : run
-            ? `We checked ${run.considered} new job${run.considered === 1 ? "" : "s"} and none fit your roles, locations and experience. Widening your preferences brings in more.`
+            ? `We checked ${run.considered} new job${run.considered === 1 ? "" : "s"} and none fit yet.`
             : "Refresh to check open jobs against your profile."}
       </p>
+      {reasons.length > 0 && (
+        <ul className="reasons small muted">
+          {reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+      {reasons.length > 0 && (
+        <p className="small" style={{ margin: 0 }}>
+          <Link href="/profile">Widen your roles or locations</Link> to bring more in.
+        </p>
+      )}
     </div>
   );
+}
+
+const filterLabels: Record<string, (n: number) => string> = {
+  role: (n) => `${n} ${n === 1 ? "was a different role" : "were different roles"}`,
+  location: (n) => `${n} ${n === 1 ? "was" : "were"} outside your locations or work mode`,
+  experience: (n) => `${n} asked for a different experience level`,
+  seniority: (n) => `${n} ${n === 1 ? "was an entry-level or junior role" : "were entry-level or junior roles"}`,
+  skippedCompany: (n) => `${n} ${n === 1 ? "was" : "were"} at companies you skip`,
+  other: (n) => `${n} filtered for other reasons`,
+};
+
+function filterSummary(filtered: Record<string, number | undefined>): string[] {
+  return Object.entries(filtered)
+    .filter(([, n]) => (n ?? 0) > 0)
+    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+    .map(([k, n]) => (filterLabels[k] ?? filterLabels.other)(n ?? 0));
 }
 
 function runSummary(run: Feed["lastRun"] | undefined, refreshing: boolean): string {

@@ -50,7 +50,9 @@ class MatchingService(
         } ?: return@withLock null
 
         try {
-            val passed = setup.candidates.filter { HardFilter.evaluate(it, setup.profile, setup.prefs).pass }
+            val verdicts = setup.candidates.map { it to HardFilter.evaluate(it, setup.profile, setup.prefs) }
+            val passed = verdicts.filter { it.second.pass }.map { it.first }
+            val filtered = verdicts.filterNot { it.second.pass }.groupingBy { filterCategory(it.second.reason) }.eachCount()
             val shortlist = LexicalRanker.rank(passed, setup.profile).take(shortlistSize)
             val budget = if (claude == null) 0 else (dailyLlmLimit - setup.llmUsed).coerceAtLeast(0)
             val forLlm = shortlist.take(budget)
@@ -65,7 +67,7 @@ class MatchingService(
 
             db.tx { c ->
                 scored.forEach { (job, fit, scorer) -> Matches.insert(c, userId, job.id, fit, scorer, setup.profileVersion) }
-                MatchRuns.finish(c, setup.runId, setup.candidates.size, passed.size, scored.size, llmCount)
+                MatchRuns.finish(c, setup.runId, setup.candidates.size, passed.size, scored.size, llmCount, filtered = filtered)
             }
             log.info("Matching for {}: {} candidates, {} passed, {} scored ({} by Claude)", userId, setup.candidates.size, passed.size, scored.size, llmCount)
         } catch (e: Exception) {
@@ -94,6 +96,16 @@ class MatchingService(
                 }
             }.awaitAll().fold(emptyMap<UUID, FitScore>()) { acc, m -> acc + m }
         }
+    }
+
+    /** Groups filter reasons into the buckets the feed explains to the user. */
+    private fun filterCategory(reason: String): String = when {
+        reason == "location" -> "location"
+        reason == "role" -> "role"
+        reason == "company on skip list" -> "skippedCompany"
+        reason == "entry-level role" || reason == "junior role" -> "seniority"
+        reason.startsWith("needs") || reason.startsWith("asks") -> "experience"
+        else -> "other"
     }
 
     private data class Setup(

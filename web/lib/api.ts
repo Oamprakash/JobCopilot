@@ -74,6 +74,8 @@ export type MatchRun = {
   scored: number;
   llmScored: number;
   error: string | null;
+  /** Jobs the hard filter dropped, by reason. */
+  filtered: Partial<Record<"role" | "location" | "experience" | "seniority" | "skippedCompany" | "other", number>>;
 };
 
 export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean };

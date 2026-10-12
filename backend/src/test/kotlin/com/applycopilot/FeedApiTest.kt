@@ -158,6 +158,8 @@ class FeedApiTest {
         val senior = feed.jobs.first { it.title == "Senior Android Engineer" }
         assertTrue("Kotlin Multiplatform" in senior.missingSkills, "${senior.missingSkills}")
         assertEquals(6, feed.lastRun!!.considered)
+        // The sales job is the wrong role; the US-remote and San Francisco jobs are outside the user's locations.
+        assertEquals(mapOf("role" to 1, "location" to 2), feed.lastRun!!.filtered)
 
         val detail = client.get("/jobs/${senior.jobId}").body<JobDetailDto>()
         assertTrue(detail.description.contains("Jetpack Compose"))
