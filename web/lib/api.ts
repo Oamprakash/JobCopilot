@@ -82,7 +82,8 @@ export type MatchRun = {
 
 export type Suggestion = { kind: "location" | "role" | "remote"; value: string; count: number };
 
-export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean };
+/** hiddenWeak: new matches scoring below minScore that were left out because weak matches weren't asked for. */
+export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean; minScore?: number; hiddenWeak?: number };
 
 export type JobDetail = {
   jobId: string;
@@ -194,8 +195,8 @@ export const api = {
   saveProfile: (profile: Profile, resumeFileId?: string) =>
     request<StoredProfile>("/profile", { method: "PUT", body: json({ profile, resumeFileId }) }),
 
-  feed: (status: MatchStatus) => request<Feed>(`/feed?status=${status}`),
-  refreshFeed: () => request<Feed>("/feed/refresh", { method: "POST" }),
+  feed: (status: MatchStatus, weak = false) => request<Feed>(`/feed?status=${status}${weak ? "&weak=true" : ""}`),
+  refreshFeed: (weak = false) => request<Feed>(`/feed/refresh${weak ? "?weak=true" : ""}`, { method: "POST" }),
   setMatchStatus: (jobId: string, status: MatchStatus) =>
     request<{ ok: boolean }>(`/feed/${jobId}/status`, { method: "PUT", body: json({ status }) }),
   job: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),

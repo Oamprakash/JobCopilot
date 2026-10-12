@@ -17,6 +17,8 @@ import {
 } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 
+const SHOW_WEAK_KEY = "feed.showWeak";
+
 const tabs: { status: MatchStatus; label: string }[] = [
   { status: "new", label: "New" },
   { status: "saved", label: "Saved" },
@@ -31,6 +33,23 @@ export default function FeedPage() {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  // Off by default: the New tab hides matches scoring below the cutoff. Remembered per browser.
+  const [showWeak, setShowWeakState] = useState(false);
+  const setShowWeak = (on: boolean) => {
+    setShowWeakState(on);
+    try {
+      localStorage.setItem(SHOW_WEAK_KEY, on ? "1" : "0");
+    } catch {
+      // Storage blocked (private window): the choice lasts for this visit only.
+    }
+  };
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SHOW_WEAK_KEY) === "1") setShowWeakState(true);
+    } catch {
+      // Storage blocked: keep the default.
+    }
+  }, []);
   // One automatic rebuild per visit when the profile or preferences changed since the last run.
   const autoRefreshed = useRef(false);
 
@@ -38,7 +57,7 @@ export default function FeedPage() {
     setRefreshing(true);
     setError(null);
     try {
-      const fresh = await api.refreshFeed();
+      const fresh = await api.refreshFeed(showWeak);
       if (status === "new") setFeed(fresh);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) router.replace("/onboarding");
@@ -46,7 +65,7 @@ export default function FeedPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [router, status]);
+  }, [router, status, showWeak]);
 
   useEffect(() => {
     if (!me) return;
@@ -62,7 +81,7 @@ export default function FeedPage() {
     let cancelled = false;
     setFeed(null);
     api
-      .feed(status)
+      .feed(status, showWeak)
       .then((f) => {
         if (cancelled) return;
         setFeed(f);
@@ -75,9 +94,9 @@ export default function FeedPage() {
     return () => {
       cancelled = true;
     };
-    // refresh is stable for a given status; re-running on it would double-fetch.
+    // refresh is stable for a given status and toggle; re-running on it would double-fetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me, status]);
+  }, [me, status, showWeak]);
 
   // One tap widens the preferences and rebuilds the feed with the change.
   async function applySuggestion(s: Suggestion) {
@@ -92,7 +111,7 @@ export default function FeedPage() {
     setError(null);
     try {
       setPrefs(await api.savePreferences(next));
-      const fresh = await api.refreshFeed();
+      const fresh = await api.refreshFeed(showWeak);
       setStatus("new");
       setFeed(fresh);
     } catch (e) {
@@ -177,12 +196,16 @@ export default function FeedPage() {
             )}
           </div>
 
+          {status === "new" && (
+            <WeakToggle on={showWeak} onChange={setShowWeak} hidden={feed?.hiddenWeak ?? 0} minScore={feed?.minScore ?? 40} />
+          )}
+
           <Problems error={error} />
 
           {!feed || (refreshing && feed.jobs.length === 0) ? (
             <div className="card muted">{refreshing ? "Checking open jobs against your profile…" : "Loading…"}</div>
           ) : feed.jobs.length === 0 ? (
-            <EmptyState status={status} feed={feed} />
+            <EmptyState status={status} feed={feed} onShowWeak={() => setShowWeak(true)} />
           ) : (
             feed.jobs.map((job) => <JobCard key={job.jobId} job={job} onMove={move} />)
           )}
@@ -238,7 +261,7 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
     <article className="card job-card">
       <div className={`score score-${tone}`} aria-label={`Fit score ${job.score} out of 100`}>
         <span className="score-value">{job.score}</span>
-        <span className="score-label">FIT</span>
+        <span className="score-label">{job.score < 40 ? "LOW" : "FIT"}</span>
       </div>
       <div className="job-body stack" style={{ gap: 10 }}>
         <div>
@@ -288,9 +311,41 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
   );
 }
 
-function EmptyState({ status, feed }: { status: MatchStatus; feed: Feed }) {
+function WeakToggle({ on, onChange, hidden, minScore }: { on: boolean; onChange: (on: boolean) => void; hidden: number; minScore: number }) {
+  return (
+    <label className="checkbox">
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      <span>
+        Show weaker matches
+        <span className="muted small">
+          {" "}
+          (score below {minScore}
+          {!on && hidden > 0 ? `, ${hidden} hidden` : ""})
+        </span>
+      </span>
+    </label>
+  );
+}
+
+function EmptyState({ status, feed, onShowWeak }: { status: MatchStatus; feed: Feed; onShowWeak: () => void }) {
   if (status === "saved") return <div className="card muted">Jobs you save show up here.</div>;
   if (status === "skipped") return <div className="card muted">Jobs you skip show up here, in case you change your mind.</div>;
+  const hidden = feed.hiddenWeak ?? 0;
+  if (hidden > 0) {
+    return (
+      <div className="card stack" style={{ gap: 8 }}>
+        <h2>No strong matches right now</h2>
+        <p className="muted small" style={{ margin: 0 }}>
+          {hidden} job{hidden === 1 ? "" : "s"} passed your filters but scored below {feed.minScore ?? 40}.
+        </p>
+        <div>
+          <button type="button" className="btn btn-secondary" onClick={onShowWeak}>
+            Show {hidden === 1 ? "it" : `all ${hidden}`}
+          </button>
+        </div>
+      </div>
+    );
+  }
   const run = feed.lastRun;
   const reasons = run ? filterSummary(run.filtered) : [];
   return (

@@ -27,8 +27,8 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
-/** Unreviewed matches below this score stay out of the feed. */
-private const val MIN_FEED_SCORE = 40
+/** Unreviewed matches below this score stay out of the New tab unless the user asks for weaker matches. */
+const val MIN_FEED_SCORE = 40
 private val REFRESH_COOLDOWN: Duration = Duration.ofMinutes(2)
 
 @Serializable
@@ -61,8 +61,18 @@ data class MatchRunDto(
     val suggestions: List<Suggestion> = emptyList(),
 )
 
+/**
+ * [hiddenWeak] is how many new matches score below [minScore] and are left out because weaker matches weren't
+ * asked for (always 0 for Saved and Skipped, which show every score).
+ */
 @Serializable
-data class FeedResponse(val jobs: List<FeedJobDto>, val lastRun: MatchRunDto?, val needsRefresh: Boolean)
+data class FeedResponse(
+    val jobs: List<FeedJobDto>,
+    val lastRun: MatchRunDto?,
+    val needsRefresh: Boolean,
+    val minScore: Int = MIN_FEED_SCORE,
+    val hiddenWeak: Int = 0,
+)
 
 @Serializable
 data class StatusRequest(val status: String)
@@ -126,13 +136,18 @@ private fun SyncResult.toDto() = SyncResultDto(company.toDto(), fetched, inserte
 private fun uuidParam(raw: String?, what: String): UUID =
     raw?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: throw ApiException(HttpStatusCode.NotFound, "$what not found")
 
-private suspend fun feedResponse(deps: Deps, userId: UUID, status: String): FeedResponse = deps.db.tx { c ->
+/** `?weak=true` on the New tab also returns matches scoring below [MIN_FEED_SCORE]. */
+private fun ApplicationCall.wantsWeak(): Boolean = request.queryParameters["weak"] == "true"
+
+private suspend fun feedResponse(deps: Deps, userId: UUID, status: String, weak: Boolean = false): FeedResponse = deps.db.tx { c ->
     val lastRun = MatchRuns.latest(c, userId)
     val changedAt = MatchRuns.inputsChangedAt(c, userId)
+    val hidesWeak = status == "new" && !weak
     FeedResponse(
-        jobs = Matches.feed(c, userId, status, if (status == "new") MIN_FEED_SCORE else 0).map { it.toDto() },
+        jobs = Matches.feed(c, userId, status, if (hidesWeak) MIN_FEED_SCORE else 0).map { it.toDto() },
         lastRun = lastRun?.toDto(),
         needsRefresh = changedAt != null && (lastRun == null || lastRun.startedAt.isBefore(changedAt)),
+        hiddenWeak = if (hidesWeak) Matches.countNewBelow(c, userId, MIN_FEED_SCORE) else 0,
     )
 }
 
@@ -147,14 +162,15 @@ fun Route.feedRoutes(deps: Deps) {
     get("/feed") {
         val status = call.request.queryParameters["status"] ?: "new"
         if (status !in setOf("new", "saved", "skipped")) throw ApiException(HttpStatusCode.BadRequest, "Unknown status")
-        call.respond(feedResponse(deps, call.userId(), status))
+        call.respond(feedResponse(deps, call.userId(), status, call.wantsWeak()))
     }
 
     // Rebuilds the feed now. Throttled unless the profile or preferences changed since the last run.
     post("/feed/refresh") {
         call.requireSameOrigin(deps.config)
         val userId = call.userId()
-        val current = feedResponse(deps, userId, "new")
+        val weak = call.wantsWeak()
+        val current = feedResponse(deps, userId, "new", weak)
         val last = current.lastRun?.finishedAt?.let { Instant.parse(it) }
         val recent = last != null && last.isAfter(Instant.now().minus(REFRESH_COOLDOWN))
         if (!current.needsRefresh && recent) {
@@ -162,7 +178,7 @@ fun Route.feedRoutes(deps: Deps) {
             return@post
         }
         deps.matching.refresh(userId) ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile first")
-        call.respond(feedResponse(deps, userId, "new"))
+        call.respond(feedResponse(deps, userId, "new", weak))
     }
 
     put("/feed/{jobId}/status") {

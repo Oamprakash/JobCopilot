@@ -242,6 +242,19 @@ object Matches {
         }
     }
 
+    /** New matches on open jobs that score below [minScore], i.e. the ones the New tab hides by default. */
+    fun countNewBelow(c: Connection, userId: UUID, minScore: Int): Int =
+        c.prepareStatement(
+            """
+            SELECT count(*) FROM matches m JOIN jobs j ON j.id = m.job_id
+            WHERE m.user_id = ? AND m.status = 'new' AND m.score < ? AND j.closed_at IS NULL
+            """.trimIndent(),
+        ).use { st ->
+            st.setObject(1, userId)
+            st.setInt(2, minScore)
+            st.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+        }
+
     fun feed(c: Connection, userId: UUID, status: String, minScore: Int, limit: Int = 100): List<FeedRow> =
         c.prepareStatement(
             """

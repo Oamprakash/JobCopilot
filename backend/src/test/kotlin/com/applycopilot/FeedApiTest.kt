@@ -257,6 +257,37 @@ class FeedApiTest {
     }
 
     @Test
+    fun weakMatchesAreHiddenUntilAskedFor() = withApp(mapOf("ANTHROPIC_API_KEY" to "test-key")) { deps ->
+        claudeScoring = { request ->
+            val ids = Regex("<job id=\\\\\"([0-9a-f-]+)\\\\\">").findAll((request.body as TextContent).text).map { it.groupValues[1] }.toList()
+            val results = ids.joinToString(",") { """{"jobId":"$it","score":25,"reasons":["Little overlap"],"missingSkills":[]}""" }
+            respond(
+                """{"content":[{"type":"tool_use","id":"t1","name":"score_jobs","input":{"results":[$results]}}],"stop_reason":"tool_use"}""",
+                HttpStatusCode.OK,
+                json,
+            )
+        }
+        deps.ingestion.syncAll()
+        val client = newClient()
+        client.onboard(prefs)
+        val hidden = client.post("/feed/refresh").body<FeedResponse>()
+        assertTrue(hidden.jobs.isEmpty())
+        assertEquals(3, hidden.hiddenWeak)
+        assertEquals(40, hidden.minScore)
+
+        val weak = client.get("/feed?status=new&weak=true").body<FeedResponse>()
+        assertEquals(3, weak.jobs.size)
+        assertTrue(weak.jobs.all { it.score == 25 })
+        assertEquals(0, weak.hiddenWeak)
+        assertEquals(3, client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.size)
+
+        // Saving a weak match moves it to Saved, which shows every score, and it no longer counts as hidden.
+        client.put("/feed/${weak.jobs.first().jobId}/status") { contentType(ContentType.Application.Json); setBody(StatusRequest("saved")) }
+        assertEquals(1, client.feed("saved").jobs.size)
+        assertEquals(2, client.feed().hiddenWeak)
+    }
+
+    @Test
     fun claudeFailureFallsBackToHeuristic() = withApp(mapOf("ANTHROPIC_API_KEY" to "test-key")) { deps ->
         claudeScoring = { respond("""{"type":"error"}""", HttpStatusCode.ServiceUnavailable) }
         deps.ingestion.syncAll()
