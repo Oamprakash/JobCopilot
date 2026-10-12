@@ -17,6 +17,12 @@ data class AppConfig(
     val storageDir: String,
     val mail: MailConfig?,
     val secureCookies: Boolean,
+    /** Emails allowed to use /admin routes (manage boards, trigger ingestion). */
+    val adminEmails: Set<String> = emptySet(),
+    /** Cheaper model for per-job fit scoring; the parsing model stays on [claudeModel]. */
+    val claudeScoringModel: String = "claude-haiku-5-5",
+    val ingestIntervalHours: Long = 24,
+    val schedulerEnabled: Boolean = false,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -48,6 +54,11 @@ data class AppConfig(
                 storageDir = env["STORAGE_DIR"] ?: "./data/uploads",
                 mail = mail,
                 secureCookies = env["SECURE_COOKIES"]?.toBoolean() ?: (appEnv == "prod"),
+                adminEmails = env["ADMIN_EMAILS"].orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet(),
+                claudeScoringModel = env["CLAUDE_SCORING_MODEL"] ?: "claude-haiku-5-5",
+                ingestIntervalHours = env["INGEST_INTERVAL_HOURS"]?.toLong() ?: 24,
+                // Off in tests so nothing calls real job boards; on by default everywhere else.
+                schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
             )
         }
     }

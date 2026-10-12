@@ -212,12 +212,7 @@ class HeuristicResumeParser(private val today: () -> YearMonth = { YearMonth.now
             .map { it.trim().trimEnd('.') }
             .filter { it.length in 1..ProfileRules.MAX_SKILL_LENGTH && it.split(' ').size <= 5 }
 
-    private fun dictionarySkills(text: String): List<String> =
-        skillDictionary.filter { skill ->
-            // Single words ("Room", "Spring", "REST") must match case to avoid hits in ordinary prose.
-            val options = if (skill.contains(' ')) setOf(RegexOption.IGNORE_CASE) else emptySet()
-            Regex("(?<![A-Za-z0-9+#.])${Regex.escape(skill)}(?![A-Za-z0-9+#])", options).containsMatchIn(text)
-        }
+    private fun dictionarySkills(text: String): List<String> = SkillDictionary.findIn(text)
 
     // ---- Helpers --------------------------------------------------------------------------
 
@@ -271,21 +266,5 @@ class HeuristicResumeParser(private val today: () -> YearMonth = { YearMonth.now
             "Indore", "Jaipur", "Chandigarh", "Mysuru", "Madurai", "Vizag", "Visakhapatnam", "Nagpur", "Bhubaneswar",
         )
 
-        /** Common tech skills, matched as whole words; the display form is what gets stored. */
-        val skillDictionary = listOf(
-            "Kotlin", "Java", "Swift", "Objective-C", "Dart", "Flutter", "React Native", "JavaScript", "TypeScript",
-            "Python", "Golang", "Rust", "C++", "C#", "Scala", "Ruby", "PHP", "SQL", "Bash",
-            "Android", "Android SDK", "Jetpack Compose", "Coroutines", "Kotlin Flow", "RxJava", "Dagger",
-            "Hilt", "Koin", "Retrofit", "OkHttp", "Room", "SQLite", "Realm", "WorkManager", "Navigation Component",
-            "MVVM", "MVI", "MVP", "Clean Architecture", "Kotlin Multiplatform", "KMP", "Gradle", "ProGuard", "R8",
-            "Firebase", "Crashlytics", "AdMob", "Google Play", "Play Console", "Espresso", "JUnit", "Mockito",
-            "MockK", "Robolectric", "iOS", "SwiftUI", "Xcode", "Android Studio",
-            "React", "Next.js", "Angular", "Vue", "Node.js", "Spring", "Spring Boot", "Ktor", "Django",
-            "Flask", "FastAPI", ".NET", "GraphQL", "REST", "gRPC", "Microservices",
-            "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch", "Kafka", "RabbitMQ",
-            "AWS", "GCP", "Azure", "Docker", "Kubernetes", "Terraform", "Jenkins", "GitHub Actions", "CI/CD",
-            "Git", "Linux", "Agile", "Scrum", "JIRA", "Figma", "Machine Learning", "TensorFlow", "PyTorch",
-            "Team leadership", "Mentoring", "Code review", "System design",
-        )
     }
 }

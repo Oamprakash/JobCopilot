@@ -4,6 +4,7 @@ import com.applycopilot.Deps
 import com.applycopilot.core.PreferenceRules
 import com.applycopilot.core.Preferences
 import com.applycopilot.core.ProfileRules
+import com.applycopilot.db.Matches
 import com.applycopilot.db.PreferencesTable
 import com.applycopilot.db.Profiles
 import com.applycopilot.db.ResumeFiles
@@ -85,6 +86,8 @@ fun Route.accountRoutes(deps: Deps) {
                 Profiles.latest(c, userId)?.resumeFileId?.let { ResumeFiles.find(c, userId, it) }
             }
             val stored = Profiles.append(c, userId, profile, file?.id)
+            // Unreviewed matches were scored against the old profile; the next run rescores them.
+            Matches.clearNew(c, userId)
             ProfileResponse(stored.version, stored.profile, file?.let { ResumeFileDto(it.id.toString(), it.fileName) }, stored.createdAt.toString())
         }
         call.respond(response)
@@ -102,6 +105,7 @@ fun Route.accountRoutes(deps: Deps) {
         deps.db.tx { c ->
             requireUser(c, userId)
             PreferencesTable.upsert(c, userId, preferences)
+            Matches.clearNew(c, userId)
         }
         call.respond(preferences)
     }

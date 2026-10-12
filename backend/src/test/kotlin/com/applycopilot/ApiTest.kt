@@ -33,8 +33,6 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.apache.poi.xwpf.usermodel.XWPFDocument
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.utility.DockerImageName
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -47,7 +45,7 @@ import kotlin.test.assertTrue
 
 class ApiTest {
     companion object {
-        private val postgres = PostgreSQLContainer<Nothing>(DockerImageName.parse("postgres:16-alpine")).also { it.start() }
+        private val postgres get() = TestDb.postgres
 
         val RESUME = """
             Oamprakash R

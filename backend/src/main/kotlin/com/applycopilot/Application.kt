@@ -4,11 +4,14 @@ import com.applycopilot.api.ErrorResponse
 import com.applycopilot.api.HealthResponse
 import com.applycopilot.api.UserPrincipal
 import com.applycopilot.api.accountRoutes
+import com.applycopilot.api.adminRoutes
+import com.applycopilot.api.feedRoutes
 import com.applycopilot.api.authRoutes
 import com.applycopilot.api.installErrorHandling
 import com.applycopilot.api.resumeRoutes
 import com.applycopilot.auth.JwtService
 import com.applycopilot.config.AppConfig
+import com.applycopilot.jobs.Scheduler
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.serialization.kotlinx.json.json
@@ -83,7 +86,13 @@ fun Application.module(deps: Deps) {
         authenticate(SESSION_AUTH) {
             accountRoutes(deps)
             resumeRoutes(deps)
+            feedRoutes(deps)
+            adminRoutes(deps)
         }
+    }
+
+    if (deps.config.schedulerEnabled) {
+        Scheduler(deps.db, deps.ingestion, deps.matching, java.time.Duration.ofHours(deps.config.ingestIntervalHours)).start(this)
     }
 
     monitor.subscribe(ApplicationStopped) { deps.close() }

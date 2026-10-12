@@ -6,6 +6,10 @@ import com.applycopilot.auth.Mailer
 import com.applycopilot.auth.ResendMailer
 import com.applycopilot.config.AppConfig
 import com.applycopilot.db.Db
+import com.applycopilot.jobs.AtsClient
+import com.applycopilot.jobs.IngestionService
+import com.applycopilot.matching.ClaudeJobScorer
+import com.applycopilot.matching.MatchingService
 import com.applycopilot.resume.ClaudeResumeParser
 import com.applycopilot.resume.ResumeParsingService
 import com.applycopilot.storage.FileStorage
@@ -22,22 +26,19 @@ class Deps(
     val mailer: Mailer,
     val jwt: JwtService,
     val parsing: ResumeParsingService,
+    val ingestion: IngestionService,
+    val matching: MatchingService,
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
 
     override fun close() = onClose.forEach { runCatching { it.close() } }
 
     companion object {
-        fun create(config: AppConfig): Deps {
-            val http = HttpClient(CIO) {
-                expectSuccess = false
-                install(HttpTimeout) {
-                    connectTimeoutMillis = 10_000
-                    requestTimeoutMillis = 90_000
-                }
-            }
+        /** [http] is injectable so tests can serve job boards and the Claude API from a mock engine. */
+        fun create(config: AppConfig, http: HttpClient = defaultHttpClient()): Deps {
             val db = Db(config)
             val claude = config.anthropicApiKey?.let { ClaudeResumeParser(http, it, config.claudeModel) }
+            val scorer = config.anthropicApiKey?.let { ClaudeJobScorer(http, it, config.claudeScoringModel) }
             return Deps(
                 config = config,
                 db = db,
@@ -45,8 +46,18 @@ class Deps(
                 mailer = config.mail?.let { ResendMailer(http, it) } ?: ConsoleMailer(),
                 jwt = JwtService(config.jwtSecret),
                 parsing = ResumeParsingService(claude),
+                ingestion = IngestionService(db, AtsClient(http)),
+                matching = MatchingService(db, scorer),
                 onClose = listOf(db, http),
             )
+        }
+
+        fun defaultHttpClient() = HttpClient(CIO) {
+            expectSuccess = false
+            install(HttpTimeout) {
+                connectTimeoutMillis = 10_000
+                requestTimeoutMillis = 90_000
+            }
         }
     }
 }
