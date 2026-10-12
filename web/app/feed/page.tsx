@@ -259,8 +259,9 @@ const filterLabels: Record<string, (n: number) => string> = {
   other: (n) => `${n} filtered for other reasons`,
 };
 
-function filterSummary(filtered: Record<string, number | undefined>): string[] {
-  return Object.entries(filtered)
+function filterSummary(filtered: Record<string, number | undefined> | null | undefined): string[] {
+  // Older API builds (before the V3 migration) don't send this field.
+  return Object.entries(filtered ?? {})
     .filter(([, n]) => (n ?? 0) > 0)
     .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
     .map(([k, n]) => (filterLabels[k] ?? filterLabels.other)(n ?? 0));
