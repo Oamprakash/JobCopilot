@@ -1,0 +1,30 @@
+name: Probe job boards
+
+# Discovers which candidate companies have live public boards with India (and mobile) roles.
+# Runs on demand or when the candidate list changes; results are pushed to the probe-results branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [tools/board_candidates.txt, tools/probe_boards.py]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/probe_boards.py tools/board_candidates.txt
+      - name: Publish results to the probe-results branch
+        run: |
+          mkdir /tmp/out && cp probe-results.json probe-results.md /tmp/out/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan probe-results
+          git rm -rfq .
+          cp /tmp/out/* .
+          git add probe-results.json probe-results.md
+          git commit -qm "Board probe results"
+          git push -f origin probe-results
