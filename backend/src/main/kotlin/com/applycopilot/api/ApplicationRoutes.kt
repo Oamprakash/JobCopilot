@@ -1,5 +1,7 @@
 package com.applycopilot.api
 
+import com.applycopilot.db.Events
+import com.applycopilot.db.EventTypes
 import com.applycopilot.Deps
 import com.applycopilot.db.Applications
 import com.applycopilot.db.Jobs
@@ -136,7 +138,15 @@ fun Route.applicationRoutes(deps: Deps) {
             val jobId = jobIdParam(call.parameters["jobId"])
             val request = runCatching { call.receive<TailorRequest>() }.getOrDefault(TailorRequest())
             val stored = deps.tailor.tailor(userId, jobId, request.questions, request.jobDescription)
-            call.respond(deps.db.tx { c -> toDto(c, deps, userId, stored) })
+            call.respond(
+                deps.db.tx { c ->
+                    Events.record(
+                        c, userId, EventTypes.APPLICATION_TAILORED, jobId,
+                        Events.data("generator" to stored.generator, "pastedDescription" to (stored.jobDescription != null)),
+                    )
+                    toDto(c, deps, userId, stored)
+                },
+            )
         }
 
         // The user's own edits. Titles, companies and dates stay the profile's; wording is theirs.
@@ -166,8 +176,12 @@ fun Route.applicationRoutes(deps: Deps) {
             call.requireSameOrigin(deps.config)
             val userId = call.userId()
             val jobId = jobIdParam(call.parameters["jobId"])
-            val dto = deps.db.tx { c -> Applications.approve(c, userId, jobId)?.let { toDto(c, deps, userId, it) } }
-                ?: throw ApiException(HttpStatusCode.NotFound, "Not tailored yet")
+            val dto = deps.db.tx { c ->
+                Applications.approve(c, userId, jobId)?.let {
+                    Events.record(c, userId, EventTypes.APPLICATION_APPROVED, jobId)
+                    toDto(c, deps, userId, it)
+                }
+            } ?: throw ApiException(HttpStatusCode.NotFound, "Not tailored yet")
             call.respond(dto)
         }
 
@@ -176,6 +190,7 @@ fun Route.applicationRoutes(deps: Deps) {
             val jobId = jobIdParam(call.parameters["jobId"])
             val (stored, company) = deps.db.tx { c ->
                 val app = Applications.find(c, userId, jobId) ?: throw ApiException(HttpStatusCode.NotFound, "Not tailored yet")
+                Events.record(c, userId, EventTypes.RESUME_DOWNLOADED, jobId)
                 app to (Jobs.find(c, jobId)?.company ?: "job")
             }
             val bytes = withContext(Dispatchers.IO) { ResumePdf.render(stored.content.resume) }

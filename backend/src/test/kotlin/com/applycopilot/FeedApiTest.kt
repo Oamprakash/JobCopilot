@@ -1,10 +1,16 @@
 package com.applycopilot
 
 import com.applycopilot.api.AddCompanyRequest
+import com.applycopilot.api.AdminOverviewDto
+import com.applycopilot.api.AdminUserDetailDto
+import com.applycopilot.api.AdminUsersResponse
+import com.applycopilot.api.ClientEventRequest
+import com.applycopilot.api.CountedValueDto
 import com.applycopilot.api.FeedResponse
 import com.applycopilot.api.JobDetailDto
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
+import com.applycopilot.api.MeResponse
 import com.applycopilot.api.ResumeUploadResponse
 import com.applycopilot.api.SaveProfileRequest
 import com.applycopilot.api.StatusRequest
@@ -345,6 +351,61 @@ class FeedApiTest {
         val feed = client.post("/feed/refresh").body<FeedResponse>()
         assertEquals(3, feed.jobs.size)
         assertTrue(feed.jobs.all { it.scorer == "heuristic" })
+    }
+
+    @Test
+    fun activityIsRecordedAndShownToAdminsOnly() = withApp { deps ->
+        deps.ingestion.syncAll()
+        val user = newClient()
+        user.onboard(prefs)
+        val feed = user.post("/feed/refresh").body<FeedResponse>()
+        val job = feed.jobs.first()
+        user.put("/feed/${job.jobId}/status") { contentType(ContentType.Application.Json); setBody(StatusRequest("saved")) }
+        assertEquals(HttpStatusCode.OK, user.post("/events") { contentType(ContentType.Application.Json); setBody(ClientEventRequest("apply_clicked", job.jobId)) }.status)
+        assertEquals(HttpStatusCode.BadRequest, user.post("/events") { contentType(ContentType.Application.Json); setBody(ClientEventRequest("admin_viewed_user", job.jobId)) }.status)
+        assertEquals(HttpStatusCode.NotFound, user.post("/events") { contentType(ContentType.Application.Json); setBody(ClientEventRequest("job_opened", "00000000-0000-0000-0000-000000000000")) }.status)
+
+        assertFalse(user.get("/me").body<MeResponse>().isAdmin)
+        assertEquals(HttpStatusCode.Forbidden, user.get("/admin/overview").status)
+        assertEquals(HttpStatusCode.Forbidden, user.get("/admin/users").status)
+
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        assertTrue(admin.get("/me").body<MeResponse>().isAdmin)
+        val overview = admin.get("/admin/overview?days=7").body<AdminOverviewDto>()
+        assertEquals(2, overview.totalUsers)
+        assertEquals(7, overview.days.size)
+        assertEquals(1, overview.funnel["profile"])
+        assertEquals(1, overview.funnel["refreshed"])
+        assertEquals(1, overview.funnel["applyClicked"])
+        assertEquals(1, overview.eventCounts["job_saved"])
+        assertEquals(listOf(CountedValueDto("Senior Android Engineer", 1)), overview.topRoles)
+        assertEquals(setOf("Bangalore", "Chennai"), overview.topLocations.map { it.value }.toSet())
+        assertEquals(listOf(CountedValueDto(job.company, 1)), overview.topAppliedCompanies)
+
+        val listed = admin.get("/admin/users?q=oam").body<AdminUsersResponse>()
+        assertEquals(1, listed.total)
+        val summary = listed.users.single()
+        assertEquals("oam@example.com", summary.email)
+        assertEquals(1, summary.refreshes)
+        assertEquals(1, summary.applyClicks)
+        assertEquals(listOf("Senior Android Engineer"), summary.roles)
+
+        val detail = admin.get("/admin/users/${summary.id}").body<AdminUserDetailDto>()
+        val types = detail.timeline.map { it.type }
+        assertTrue(listOf("signed_in", "resume_uploaded", "profile_saved", "preferences_saved", "feed_refreshed", "job_saved", "apply_clicked").all { it in types }, "$types")
+        assertEquals(job.title, detail.timeline.first { it.type == "apply_clicked" }.jobTitle)
+        assertEquals(listOf("Bangalore", "Chennai"), detail.preferences!!.locations)
+        assertEquals(HttpStatusCode.NotFound, admin.get("/admin/users/not-a-uuid").status)
+
+        // Viewing a user is audited against the admin, and never shows in the user's own timeline.
+        deps.db.tx { c ->
+            c.createStatement().use { st ->
+                st.executeQuery("SELECT count(*) FROM events WHERE type = 'admin_viewed_user'").use { rs -> rs.next(); assertEquals(1, rs.getInt(1)) }
+                st.executeUpdate("UPDATE events SET created_at = now() - interval '400 days' WHERE type = 'signed_in'")
+            }
+            assertEquals(2, com.applycopilot.db.Events.deleteOlderThan(c, 180), "both sign-ins are past retention")
+        }
+        assertFalse(admin.get("/admin/users/${summary.id}").body<AdminUserDetailDto>().timeline.any { it.type == "admin_viewed_user" })
     }
 
     @Test

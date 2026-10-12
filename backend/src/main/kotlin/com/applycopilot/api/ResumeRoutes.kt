@@ -1,5 +1,7 @@
 package com.applycopilot.api
 
+import com.applycopilot.db.Events
+import com.applycopilot.db.EventTypes
 import com.applycopilot.Deps
 import com.applycopilot.db.ResumeFile
 import com.applycopilot.db.ResumeFiles
@@ -70,6 +72,7 @@ fun Route.resumeRoutes(deps: Deps) {
         }
 
         val outcome = deps.parsing.parse(extracted.text)
+        deps.db.tx { c -> Events.record(c, userId, EventTypes.RESUME_UPLOADED, data = Events.data("parser" to outcome.parser)) }
         call.respond(
             ResumeUploadResponse(
                 resumeFile = ResumeFileDto(file.id.toString(), file.fileName),

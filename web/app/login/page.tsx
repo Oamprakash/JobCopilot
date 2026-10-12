@@ -69,6 +69,10 @@ export default function LoginPage() {
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? "Sending…" : "Email me a sign-in link"}
           </button>
+          <p className="hint" style={{ margin: 0 }}>
+            We keep a record of how you use Apply Copilot (searches, jobs you open, applications you prepare) to run and
+            improve it. Deleting your account from your profile erases it.
+          </p>
         </form>
       )}
     </main>

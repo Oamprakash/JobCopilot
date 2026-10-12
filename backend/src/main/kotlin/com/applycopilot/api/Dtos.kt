@@ -14,7 +14,7 @@ data class MagicLinkResponse(val ok: Boolean, val devLink: String? = null)
 data class VerifyRequest(val token: String)
 
 @Serializable
-data class MeResponse(val id: String, val email: String, val plan: String, val hasProfile: Boolean)
+data class MeResponse(val id: String, val email: String, val plan: String, val hasProfile: Boolean, val isAdmin: Boolean = false)
 
 @Serializable
 data class OkResponse(val ok: Boolean = true)

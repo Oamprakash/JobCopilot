@@ -101,7 +101,7 @@ export default function ApplyPage() {
     await generate(jobDescription);
   }
 
-  const header = <AppHeader email={me?.email} />;
+  const header = <AppHeader email={me?.email} isAdmin={me?.isAdmin} />;
 
   if (limitHit) {
     return (
@@ -244,7 +244,13 @@ export default function ApplyPage() {
                 <a className="btn btn-primary btn-block" href={api.resumePdfUrl(jobId)} download>
                   Download resume PDF
                 </a>
-                <a className="btn btn-secondary btn-block" href={view.job.applyUrl} target="_blank" rel="noopener noreferrer">
+                <a
+                  className="btn btn-secondary btn-block"
+                  href={view.job.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => api.track("apply_clicked", jobId)}
+                >
                   Open application page
                 </a>
                 <p className="muted small" style={{ margin: 0 }}>

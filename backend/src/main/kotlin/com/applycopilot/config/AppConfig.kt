@@ -27,6 +27,8 @@ data class AppConfig(
     val schedulerEnabled: Boolean = false,
     /** Tailored applications a free user may start per calendar month. */
     val freeTailorLimit: Int = 5,
+    /** Activity events (admin dashboard) are kept this many days. */
+    val eventRetentionDays: Int = 180,
     /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
     val adzuna: AdzunaConfig? = null,
 ) {
@@ -67,6 +69,7 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                eventRetentionDays = (env["EVENT_RETENTION_DAYS"]?.toInt() ?: 180).coerceAtLeast(1),
             )
         }
 

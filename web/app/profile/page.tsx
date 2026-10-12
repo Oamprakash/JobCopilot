@@ -86,7 +86,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <AppHeader email={me?.email} />
+      <AppHeader email={me?.email} isAdmin={me?.isAdmin} />
       <main className="container stack" style={{ gap: 24 }}>
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div className="stack" style={{ gap: 4 }}>

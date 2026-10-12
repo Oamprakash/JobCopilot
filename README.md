@@ -34,6 +34,7 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 | Fit score | Claude (`CLAUDE_SCORING_MODEL`, batches of 8) for up to 50 jobs per user per day; the rule-based scorer covers the rest, or everything when no API key is set. Claude's "missing skills" are kept only if the JD mentions them. |
 | Feed | An empty feed says why, e.g. "290 were different roles, 15 were outside your locations". **Widen your search** suggests the single changes (add a city, add a role family, include remote) that would let the most filtered-out jobs through, counting only jobs that mention at least two of the user's skills; one tap updates preferences and rebuilds the feed. New / Saved / Skipped tabs; New hides matches scoring below 40 unless **Show weaker matches** is ticked (it says how many are hidden), while Saved and Skipped show every score. Score, 3 reasons, missing skills, full JD, link to the job. Changing the profile or preferences clears unreviewed matches and rebuilds the feed on the next visit. |
 | Admin | `ADMIN_EMAILS` can list boards, add one (synced straight away, so a wrong token shows its error), pause one, or run a sync. |
+| Admin dashboard | Admins sign in like anyone else (magic link) and get an **Admin** tab: users total / new / active (7 and 30 days), active users per day, how far users get (profile → refresh → tailor → approve → click to apply), activity counts, most searched roles and locations, and companies users clicked through to apply to. The user list (search by email or name) shows each user's current search and totals; a user's page shows their timeline: sign-ins, every saved search, feed refreshes, jobs opened / saved / skipped, applications tailored and approved, PDFs downloaded and clicks to apply. Events are stored in `events` (V11); the two link clicks are reported by the browser through `POST /events`, everything else is recorded server-side. Opening a user's page is itself recorded against the admin. Deleting an account deletes its events; events older than `EVENT_RETENTION_DAYS` (default 180) are deleted daily. The sign-in page tells users their activity is recorded. |
 
 Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","boardToken":"acme"}`. The token is the part of the board URL after `boards.greenhouse.io/`, `jobs.lever.co/`, `jobs.ashbyhq.com/` or `apply.workable.com/`; for SmartRecruiters it is the company id in `jobs.smartrecruiters.com/{id}` (case matters, e.g. `BoschGroup`). To turn a paused board on: `PUT /api/admin/companies/{id}/active {"active": true}` (ids from `GET /api/admin/companies`).
 
@@ -102,6 +103,10 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | PUT | `/feed/{jobId}/status` | `{status}` |
 | GET | `/jobs/{jobId}` | job with full description |
 | GET/POST | `/admin/companies` | list / add a board (admins) |
+| GET | `/admin/overview?days=7\|30\|90` | dashboard totals, daily activity, funnel, top searches (admins) |
+| GET | `/admin/users?q=&offset=&limit=` | users with their search and totals (admins) |
+| GET | `/admin/users/{id}` | one user's preferences, applications and activity timeline (admins; audited) |
+| POST | `/events` | `{type: "job_opened"\|"apply_clicked", jobId}`: link clicks the browser reports |
 | PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
 | POST | `/admin/ingest` | sync every active board now (admins) |
 | POST | `/applications/{jobId}/tailor` | `{questions?, jobDescription?}` → draft (creates or regenerates); `jobDescription` replaces the job's text for this application, `""` clears it |

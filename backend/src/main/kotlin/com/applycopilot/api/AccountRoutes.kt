@@ -1,5 +1,7 @@
 package com.applycopilot.api
 
+import com.applycopilot.db.Events
+import com.applycopilot.db.EventTypes
 import com.applycopilot.Deps
 import com.applycopilot.core.PreferenceRules
 import com.applycopilot.core.Preferences
@@ -39,7 +41,7 @@ fun Route.accountRoutes(deps: Deps) {
             throw ApiException(HttpStatusCode.Unauthorized, "Not signed in")
         }
         val (user, hasProfile) = me
-        call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile))
+        call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile, user.email in deps.config.adminEmails))
     }
 
     // One-step account deletion (DPDP Act): the user row cascades to every table, then files are removed.
@@ -86,6 +88,7 @@ fun Route.accountRoutes(deps: Deps) {
                 Profiles.latest(c, userId)?.resumeFileId?.let { ResumeFiles.find(c, userId, it) }
             }
             val stored = Profiles.append(c, userId, profile, file?.id)
+            Events.record(c, userId, EventTypes.PROFILE_SAVED, data = Events.data("version" to stored.version))
             // Unreviewed matches were scored against the old profile; the next run rescores them.
             Matches.clearNew(c, userId)
             ProfileResponse(stored.version, stored.profile, file?.let { ResumeFileDto(it.id.toString(), it.fileName) }, stored.createdAt.toString())
@@ -106,6 +109,14 @@ fun Route.accountRoutes(deps: Deps) {
             requireUser(c, userId)
             PreferencesTable.upsert(c, userId, preferences)
             Matches.clearNew(c, userId)
+            // Each saved search: what roles and places the user asked for, and when.
+            Events.record(
+                c, userId, EventTypes.PREFERENCES_SAVED,
+                data = Events.data(
+                    "roles" to preferences.roles, "locations" to preferences.locations,
+                    "remoteMode" to preferences.remoteMode.dbValue, "needsVisaSponsorship" to preferences.needsVisaSponsorship,
+                ),
+            )
         }
         call.respond(preferences)
     }

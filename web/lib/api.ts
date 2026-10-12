@@ -45,7 +45,44 @@ export type Preferences = {
   needsVisaSponsorship?: boolean;
 };
 
-export type Me = { id: string; email: string; plan: "free" | "pro"; hasProfile: boolean };
+export type Me = { id: string; email: string; plan: "free" | "pro"; hasProfile: boolean; isAdmin?: boolean };
+
+export type Counted = { value: string; count: number };
+export type AdminOverview = {
+  windowDays: number;
+  totalUsers: number;
+  newUsers: number;
+  activeUsers7: number;
+  activeUsers30: number;
+  days: { day: string; activeUsers: number; newUsers: number; events: number }[];
+  eventCounts: Record<string, number>;
+  funnel: Record<string, number>;
+  topRoles: Counted[];
+  topLocations: Counted[];
+  topAppliedCompanies: Counted[];
+};
+export type AdminUser = {
+  id: string;
+  email: string;
+  plan: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  name: string | null;
+  headline: string | null;
+  roles: string[];
+  locations: string[];
+  refreshes: number;
+  tailored: number;
+  approved: number;
+  applyClicks: number;
+};
+export type AdminEvent = { type: string; at: string; jobId: string | null; jobTitle: string | null; company: string | null; data: Record<string, unknown> };
+export type AdminUserDetail = {
+  user: AdminUser;
+  preferences: Preferences | null;
+  applications: { jobId: string; title: string; company: string; status: string; updatedAt: string; applyUrl: string }[];
+  timeline: AdminEvent[];
+};
 export type ResumeFile = { id: string; fileName: string };
 export type ResumeUpload = { resumeFile: ResumeFile; parser: "claude" | "heuristic"; profile: Profile; removed: string[] };
 export type StoredProfile = { version: number; profile: Profile; resumeFile: ResumeFile | null; updatedAt: string };
@@ -245,6 +282,22 @@ export const api = {
   usage: () => request<Usage>("/usage"),
 
   autocomplete: () => request<AutocompleteOptions>("/autocomplete"),
+
+  /** Reports a click the server can't see (a link to another site). Fire and forget; survives the page unloading. */
+  track: (type: "job_opened" | "apply_clicked", jobId: string) => {
+    fetch("/api/events", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: json({ type, jobId }),
+    }).catch(() => undefined);
+  },
+
+  adminOverview: (days: number) => request<AdminOverview>(`/admin/overview?days=${days}`),
+  adminUsers: (q: string, offset = 0) =>
+    request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
+  adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>

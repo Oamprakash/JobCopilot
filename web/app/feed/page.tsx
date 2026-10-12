@@ -146,7 +146,7 @@ export default function FeedPage() {
 
   return (
     <>
-      <AppHeader email={me?.email} />
+      <AppHeader email={me?.email} isAdmin={me?.isAdmin} />
       <main className="container split" style={{ gap: 24 }}>
         <aside className="side stack" style={{ maxWidth: 300 }}>
           <section className="card stack" style={{ gap: 12 }}>
@@ -309,7 +309,7 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
         <Link className="btn btn-primary" href={`/apply/${job.jobId}`}>
           Tailor and apply
         </Link>
-        <a className="btn btn-secondary" href={job.applyUrl} target="_blank" rel="noopener noreferrer">
+        <a className="btn btn-secondary" href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={() => api.track("job_opened", job.jobId)}>
           View job
         </a>
         {job.status === "new" && (

@@ -1,5 +1,7 @@
 package com.applycopilot.api
 
+import com.applycopilot.db.Events
+import com.applycopilot.db.EventTypes
 import com.applycopilot.Deps
 import com.applycopilot.core.Emails
 import com.applycopilot.core.Tokens
@@ -53,11 +55,12 @@ fun Route.authRoutes(deps: Deps) {
             val (user, hasProfile) = deps.db.tx { c ->
                 val email = MagicLinks.consume(c, Tokens.sha256Hex(request.token)) ?: return@tx null
                 val user = Users.findOrCreate(c, email)
+                Events.record(c, user.id, EventTypes.SIGNED_IN)
                 user to Profiles.exists(c, user.id)
             } ?: throw invalid
 
             call.setSessionCookie(deps.config, deps.jwt.issue(user.id), deps.jwt.lifetimeSeconds)
-            call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile))
+            call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile, user.email in deps.config.adminEmails))
         }
 
         post("/logout") {

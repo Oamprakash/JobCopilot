@@ -1,5 +1,6 @@
 package com.applycopilot
 
+import com.applycopilot.api.adminDashboardRoutes
 import com.applycopilot.api.ErrorResponse
 import com.applycopilot.api.HealthResponse
 import com.applycopilot.api.RootResponse
@@ -95,11 +96,15 @@ fun Application.module(deps: Deps) {
             feedRoutes(deps)
             applicationRoutes(deps)
             adminRoutes(deps)
+            adminDashboardRoutes(deps)
         }
     }
 
     if (deps.config.schedulerEnabled) {
-        Scheduler(deps.db, deps.ingestion, deps.matching, java.time.Duration.ofHours(deps.config.ingestIntervalHours)).start(this)
+        Scheduler(
+            deps.db, deps.ingestion, deps.matching, java.time.Duration.ofHours(deps.config.ingestIntervalHours),
+            eventRetentionDays = deps.config.eventRetentionDays,
+        ).start(this)
     }
 
     monitor.subscribe(ApplicationStopped) { deps.close() }

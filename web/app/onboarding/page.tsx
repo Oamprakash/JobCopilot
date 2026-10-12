@@ -64,7 +64,7 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <AppHeader email={me?.email} />
+      <AppHeader email={me?.email} isAdmin={me?.isAdmin} />
       <main className="container stack" style={{ gap: 24 }}>
         <ol className="steps" aria-label="Onboarding progress">
           <li data-state={stepState("upload")}>1 Resume</li>

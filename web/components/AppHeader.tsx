@@ -13,7 +13,7 @@ export function Logo() {
   );
 }
 
-export function AppHeader({ email }: { email?: string }) {
+export function AppHeader({ email, isAdmin }: { email?: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -36,6 +36,11 @@ export function AppHeader({ email }: { email?: string }) {
           <Link href="/profile" className="nav-link" aria-current={pathname === "/profile" ? "page" : undefined}>
             Profile
           </Link>
+          {isAdmin && (
+            <Link href="/admin" className="nav-link" aria-current={pathname?.startsWith("/admin") ? "page" : undefined}>
+              Admin
+            </Link>
+          )}
         </nav>
         {email && <span className="small muted">{email}</span>}
         <button type="button" className="btn btn-ghost" onClick={signOut}>

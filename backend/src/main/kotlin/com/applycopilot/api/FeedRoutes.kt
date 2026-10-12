@@ -1,5 +1,7 @@
 package com.applycopilot.api
 
+import com.applycopilot.db.Events
+import com.applycopilot.db.EventTypes
 import com.applycopilot.Deps
 import com.applycopilot.db.Companies
 import com.applycopilot.db.Company
@@ -88,6 +90,9 @@ data class FeedResponse(
 
 @Serializable
 data class StatusRequest(val status: String)
+
+@Serializable
+data class ClientEventRequest(val type: String, val jobId: String? = null)
 
 @Serializable
 data class JobDetailDto(
@@ -200,8 +205,15 @@ fun Route.feedRoutes(deps: Deps) {
         }
         // Fetch this user's aggregator searches first if they haven't run today, so new preferences show results now.
         runCatching { deps.ingestion.syncAggregatorFor(userId) }.onFailure { log.warn("Aggregator search failed for {}", userId, it) }
-        deps.matching.refresh(userId) ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile first")
-        call.respond(feedResponse(deps, userId, "new", weak))
+        val run = deps.matching.refresh(userId) ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile first")
+        val response = feedResponse(deps, userId, "new", weak)
+        deps.db.tx { c ->
+            Events.record(
+                c, userId, EventTypes.FEED_REFRESHED,
+                data = Events.data("considered" to run.considered, "passedFilter" to run.passedFilter, "shown" to response.jobs.size),
+            )
+        }
+        call.respond(response)
     }
 
     put("/feed/{jobId}/status") {
@@ -210,8 +222,31 @@ fun Route.feedRoutes(deps: Deps) {
         val jobId = uuidParam(call.parameters["jobId"], "Job")
         val status = call.receive<StatusRequest>().status
         if (status !in setOf("new", "saved", "skipped")) throw ApiException(HttpStatusCode.BadRequest, "Unknown status")
-        val updated = deps.db.tx { c -> Matches.setStatus(c, userId, jobId, status) }
+        val updated = deps.db.tx { c ->
+            Matches.setStatus(c, userId, jobId, status).also { ok ->
+                val type = when (status) {
+                    "saved" -> EventTypes.JOB_SAVED
+                    "skipped" -> EventTypes.JOB_SKIPPED
+                    else -> EventTypes.JOB_RESTORED
+                }
+                if (ok) Events.record(c, userId, type, jobId)
+            }
+        }
         if (!updated) throw ApiException(HttpStatusCode.NotFound, "Job not found")
+        call.respond(OkResponse())
+    }
+
+    // Clicks the browser reports: opening a job's posting, and going to the employer's application page.
+    post("/events") {
+        call.requireSameOrigin(deps.config)
+        val userId = call.userId()
+        val request = call.receive<ClientEventRequest>()
+        if (request.type !in EventTypes.fromClient) throw ApiException(HttpStatusCode.BadRequest, "Unknown event type")
+        val jobId = uuidParam(request.jobId, "Job")
+        deps.db.tx { c ->
+            Jobs.find(c, jobId) ?: throw ApiException(HttpStatusCode.NotFound, "Job not found")
+            Events.record(c, userId, request.type, jobId)
+        }
         call.respond(OkResponse())
     }
 
@@ -228,10 +263,12 @@ fun Route.feedRoutes(deps: Deps) {
     }
 }
 
-private suspend fun ApplicationCall.requireAdmin(deps: Deps) {
+/** Lets only ADMIN_EMAILS through; returns the admin's user id. */
+internal suspend fun ApplicationCall.requireAdmin(deps: Deps): UUID {
     val userId = userId()
     val email = deps.db.tx { c -> Users.find(c, userId)?.email }
     if (email == null || email !in deps.config.adminEmails) throw ApiException(HttpStatusCode.Forbidden, "Admins only")
+    return userId
 }
 
 /** Board management for ADMIN_EMAILS. Mount inside authenticate("session"). */
