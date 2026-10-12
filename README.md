@@ -2,7 +2,7 @@
 
 AI job-application copilot: finds well-matched jobs, tailors each application, and autofills forms, while the user always clicks Submit.
 
-Built so far: **Phase 1 (Foundation)**, which covers sign-in, resume parsing, the master profile and preferences, and **Phase 2 (Job feed)**, which covers board ingestion, matching and the daily feed.
+Built so far: **Phase 1 (Foundation)**: sign-in, resume parsing, the master profile and preferences. **Phase 2 (Job feed)**: board ingestion, matching and the daily feed. **Phase 3 (Tailoring)**: a tailored resume, cover letter and screening answers per job, with a claim guardrail and a review screen.
 
 ```
 backend/   Kotlin + Ktor API, Postgres (Flyway), resume parsing (PDFBox, POI, Claude API)
@@ -34,6 +34,17 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 | Admin | `ADMIN_EMAILS` can list boards, add one (synced straight away, so a wrong token shows its error), pause one, or run a sync. |
 
 Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","boardToken":"acme"}`. The token is the part of the board URL after `boards.greenhouse.io/`, `jobs.lever.co/`, `jobs.ashbyhq.com/` or `apply.workable.com/`; for SmartRecruiters it is the company id in `jobs.smartrecruiters.com/{id}` (case matters, e.g. `BoschGroup`). To turn a paused board on: `PUT /api/admin/companies/{id}/active {"active": true}` (ids from `GET /api/admin/companies`).
+
+## What works in Phase 3
+
+| Area | What it does |
+| --- | --- |
+| Drafting | **Tailor and apply** on a feed card opens the review screen and drafts the application. Claude (`CLAUDE_MODEL`) drafts it when `ANTHROPIC_API_KEY` is set; otherwise, or if the call fails, a rule-based tailor reorders skills and bullets toward the job and builds the letter and answers from profile facts. |
+| Claim guardrail | `TailorGuard` decides what goes out, whoever drafted it. Roles, titles, companies and dates always come from the profile, and every role stays. A bullet may be reordered or reworded, but one that adds a number or skill the profile lacks, or drifts from its source, reverts to the original. Skills must be the user's own. Sentences in the summary, cover letter or answers with unbacked numbers or skills are dropped. Everything removed is listed on the review screen. |
+| Sensitive questions | Pay/CTC, visa, sponsorship and personal or legal questions are never answered for the user. Notice period comes only from preferences. |
+| Review screen | Resume diff (moved up / reworded with the original struck through / unchanged), editable bullets, summary, cover letter and answers, copy buttons, JD keywords covered and missing. The user's own edits are saved but flagged if they claim something the profile doesn't show. |
+| Approve + PDF | Approving locks the version and unlocks an ATS-friendly resume PDF and a link to the employer's application page. Editing after approval sends it back to draft. |
+| Free plan | `FREE_TAILOR_LIMIT` (default 5) new tailored applications per calendar month; regenerating one doesn't count again. Pro is unlimited (`users.plan = 'pro'`; billing comes later). |
 
 ## Run it locally
 
@@ -88,6 +99,11 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | GET/POST | `/admin/companies` | list / add a board (admins) |
 | PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
 | POST | `/admin/ingest` | sync every active board now (admins) |
+| POST | `/applications/{jobId}/tailor` | `{questions?}` → draft (creates or regenerates) |
+| GET/PUT | `/applications/{jobId}` | the application / save the user's edits `{application}` |
+| POST | `/applications/{jobId}/approve` | lock in the version |
+| GET | `/applications/{jobId}/resume.pdf` | tailored resume as PDF |
+| GET | `/usage` | `{plan, tailoredThisMonth, limit}` |
 
 Validation errors return `400 {error, problems: [...]}`.
 
@@ -98,6 +114,6 @@ Validation errors return `400 {error, problems: [...]}`.
 - Uploads go to `STORAGE_DIR` on local disk. `FileStorage` is the seam for moving to Cloudflare R2.
 - `backend/Dockerfile` builds a fat jar image.
 
-## Next: Phase 3 (Tailoring)
+## Next: Phase 4 (Extension and tracker)
 
-A tailored resume, cover letter and screening answers per job, each with a claim guardrail and a review screen.
+A Chrome extension that autofills Greenhouse, Lever, Ashby and Workday forms from the approved application (the user clicks Submit), "Save job" from any job page, and the application tracker with follow-up reminders.

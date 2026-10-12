@@ -262,7 +262,10 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
         {open && <div className="jd">{detail ? detail.description || "No description provided." : "Loading…"}</div>}
       </div>
       <div className="job-actions">
-        <a className="btn btn-primary" href={job.applyUrl} target="_blank" rel="noopener noreferrer">
+        <Link className="btn btn-primary" href={`/apply/${job.jobId}`}>
+          Tailor and apply
+        </Link>
+        <a className="btn btn-secondary" href={job.applyUrl} target="_blank" rel="noopener noreferrer">
           View job
         </a>
         {job.status === "new" && (

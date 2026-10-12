@@ -96,6 +96,48 @@ export type JobDetail = {
   closed: boolean;
 };
 
+export type BulletChange = "unchanged" | "moved_up" | "reworded";
+export type TailoredBullet = { text: string; sourceIndex: number; change: BulletChange; original?: string | null };
+export type TailoredExperience = {
+  sourceIndex: number;
+  title: string;
+  company: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  current: boolean;
+  bullets: TailoredBullet[];
+};
+export type TailoredResume = {
+  fullName: string;
+  headline: string;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  summary?: string | null;
+  skills: string[];
+  experience: TailoredExperience[];
+  education: Education[];
+  links: string[];
+};
+export type ScreeningAnswer = { question: string; answer: string; needsUser: boolean; note?: string | null };
+export type TailoredApplication = { resume: TailoredResume; coverLetter: string; answers: ScreeningAnswer[] };
+export type Usage = { plan: "free" | "pro"; tailoredThisMonth: number; limit: number | null };
+export type ApplicationStatus = "draft" | "approved" | "applied" | "interview" | "offer" | "rejected";
+export type ApplicationView = {
+  job: { jobId: string; title: string; company: string; location: string; applyUrl: string; closed: boolean };
+  status: ApplicationStatus;
+  generator: "claude" | "heuristic";
+  application: TailoredApplication;
+  removed: string[];
+  warnings: string[];
+  keywordsCovered: string[];
+  keywordsMissing: string[];
+  score: number | null;
+  usage: Usage;
+  updatedAt: string;
+  approvedAt: string | null;
+};
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -153,6 +195,15 @@ export const api = {
   setMatchStatus: (jobId: string, status: MatchStatus) =>
     request<{ ok: boolean }>(`/feed/${jobId}/status`, { method: "PUT", body: json({ status }) }),
   job: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),
+
+  getApplication: (jobId: string) => request<ApplicationView>(`/applications/${jobId}`),
+  tailor: (jobId: string, questions?: string[]) =>
+    request<ApplicationView>(`/applications/${jobId}/tailor`, { method: "POST", body: json({ questions: questions ?? null }) }),
+  saveApplication: (jobId: string, application: TailoredApplication) =>
+    request<ApplicationView>(`/applications/${jobId}`, { method: "PUT", body: json({ application }) }),
+  approveApplication: (jobId: string) => request<ApplicationView>(`/applications/${jobId}/approve`, { method: "POST" }),
+  resumePdfUrl: (jobId: string) => `/api/applications/${jobId}/resume.pdf`,
+  usage: () => request<Usage>("/usage"),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>
