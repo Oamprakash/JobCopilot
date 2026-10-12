@@ -11,6 +11,8 @@ import com.applycopilot.jobs.IngestionService
 import com.applycopilot.matching.ClaudeJobScorer
 import com.applycopilot.matching.MatchingService
 import com.applycopilot.resume.ClaudeResumeParser
+import com.applycopilot.tailoring.TailorService
+import com.applycopilot.tailoring.claude.ClaudeTailor
 import com.applycopilot.resume.ResumeParsingService
 import com.applycopilot.storage.FileStorage
 import com.applycopilot.storage.LocalFileStorage
@@ -28,6 +30,7 @@ class Deps(
     val parsing: ResumeParsingService,
     val ingestion: IngestionService,
     val matching: MatchingService,
+    val tailor: TailorService,
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
 
@@ -48,6 +51,7 @@ class Deps(
                 parsing = ResumeParsingService(claude),
                 ingestion = IngestionService(db, AtsClient(http)),
                 matching = MatchingService(db, scorer),
+                tailor = TailorService(db, config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }, config.freeTailorLimit),
                 onClose = listOf(db, http),
             )
         }

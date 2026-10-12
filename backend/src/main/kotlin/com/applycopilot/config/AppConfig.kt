@@ -23,6 +23,8 @@ data class AppConfig(
     val claudeScoringModel: String = "claude-haiku-5-5",
     val ingestIntervalHours: Long = 24,
     val schedulerEnabled: Boolean = false,
+    /** Tailored applications a free user may start per calendar month. */
+    val freeTailorLimit: Int = 5,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -59,6 +61,7 @@ data class AppConfig(
                 ingestIntervalHours = env["INGEST_INTERVAL_HOURS"]?.toLong() ?: 24,
                 // Off in tests so nothing calls real job boards; on by default everywhere else.
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
+                freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
             )
         }
     }

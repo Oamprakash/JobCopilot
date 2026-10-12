@@ -6,6 +6,7 @@ import com.applycopilot.api.RootResponse
 import com.applycopilot.api.UserPrincipal
 import com.applycopilot.api.accountRoutes
 import com.applycopilot.api.adminRoutes
+import com.applycopilot.api.applicationRoutes
 import com.applycopilot.api.feedRoutes
 import com.applycopilot.api.authRoutes
 import com.applycopilot.api.installErrorHandling
@@ -92,6 +93,7 @@ fun Application.module(deps: Deps) {
             accountRoutes(deps)
             resumeRoutes(deps)
             feedRoutes(deps)
+            applicationRoutes(deps)
             adminRoutes(deps)
         }
     }
