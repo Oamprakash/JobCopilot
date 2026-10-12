@@ -73,6 +73,18 @@ npm run dev
 
 All settings are in [`backend/.env.example`](backend/.env.example). The API reads environment variables, not the file itself, so start it with `run.sh` / `run.ps1`, which load `backend/.env` (git-ignored) first; empty values keep the defaults. To set one by hand instead: `export ANTHROPIC_API_KEY=...` (macOS/Linux) or `$env:ANTHROPIC_API_KEY = "..."` (PowerShell), in the same terminal, before `./gradlew run`. If PowerShell refuses to run the script, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
+## Share a preview (Cloudflare Tunnel)
+
+To let someone try the app running on your computer, without deploying it:
+
+1. Install `cloudflared` (`winget install --id Cloudflare.cloudflared` on Windows, `brew install cloudflared` on macOS).
+2. Build and start the web app for speed: `cd web && npm run build && npm start` (port 3000).
+3. In another terminal: `cloudflared tunnel --url http://localhost:3000`. It prints a `https://….trycloudflare.com` link.
+4. In `backend/.env` set `WEB_BASE_URL` to that link, `PUBLIC_PREVIEW=true` and `INVITE_EMAILS=friend@example.com`, then restart the API with `run.ps1` / `run.sh`.
+5. Send the link. Your friend enters their email and the sign-in link appears on screen (dev mode, no email service needed). Anyone not on `INVITE_EMAILS` is refused, and admin sign-in links are printed only in the API window.
+
+Only the web app goes through the tunnel; it forwards `/api` to the API on your computer. The link works while your computer, the API, the web app and `cloudflared` are running. A quick tunnel gets a new link each time, so update `WEB_BASE_URL` when it changes; a named tunnel on your own domain keeps one link. Put `WEB_BASE_URL` back to `http://localhost:3000` and `PUBLIC_PREVIEW=false` when you're done.
+
 ## Tests
 
 ```bash

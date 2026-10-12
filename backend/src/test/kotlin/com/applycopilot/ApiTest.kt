@@ -84,7 +84,7 @@ class ApiTest {
 
     private lateinit var storageDir: Path
 
-    private fun withApp(block: suspend ApplicationTestBuilder.(Deps) -> Unit) = testApplication {
+    private fun withApp(extraEnv: Map<String, String> = emptyMap(), block: suspend ApplicationTestBuilder.(Deps) -> Unit) = testApplication {
         storageDir = Files.createTempDirectory("uploads")
         val config = AppConfig.fromEnv(
             mapOf(
@@ -93,7 +93,7 @@ class ApiTest {
                 "DATABASE_USER" to postgres.username,
                 "DATABASE_PASSWORD" to postgres.password,
                 "STORAGE_DIR" to storageDir.toString(),
-            ),
+            ) + extraEnv,
         )
         val deps = Deps.create(config)
         deps.db.migrate()
@@ -141,6 +141,24 @@ class ApiTest {
         )
 
     // ---- Auth -----------------------------------------------------------------------------
+
+    @Test
+    fun publicPreviewIsInviteOnlyAndNeverShowsAdminLinks() = withApp(
+        mapOf("PUBLIC_PREVIEW" to "true", "INVITE_EMAILS" to "Friend@Example.com", "ADMIN_EMAILS" to "admin@example.com"),
+    ) {
+        val client = createClient { install(ContentNegotiation) { json(apiJson) } }
+        suspend fun ask(email: String) = client.post("/auth/magic-link") { contentType(ContentType.Application.Json); setBody(MagicLinkRequest(email)) }
+
+        val friend = ask("friend@example.com")
+        assertEquals(HttpStatusCode.OK, friend.status)
+        assertTrue(friend.body<MagicLinkResponse>().devLink != null, "invited users see their link on screen")
+
+        assertEquals(HttpStatusCode.Forbidden, ask("stranger@example.com").status)
+
+        val admin = ask("admin@example.com")
+        assertEquals(HttpStatusCode.OK, admin.status)
+        assertEquals(null, admin.body<MagicLinkResponse>().devLink, "an admin's link is only logged, never shown")
+    }
 
     @Test
     fun magicLinkSignInWorksOnceAndLogoutEndsSession() = withApp {

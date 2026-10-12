@@ -28,6 +28,11 @@ fun Route.authRoutes(deps: Deps) {
             val request = call.receive<MagicLinkRequest>()
             val email = Emails.normalize(request.email)
                 ?: throw ApiException(HttpStatusCode.BadRequest, "Enter a valid email address")
+            val isAdmin = email in deps.config.adminEmails
+            val preview = deps.config.publicPreview
+            if (preview && !isAdmin && deps.config.inviteEmails.isNotEmpty() && email !in deps.config.inviteEmails) {
+                throw ApiException(HttpStatusCode.Forbidden, "This preview is invite-only. Ask the person who shared it to add your email.")
+            }
 
             val token = Tokens.newToken()
             val now = Instant.now()
@@ -43,7 +48,9 @@ fun Route.authRoutes(deps: Deps) {
 
             val link = "${deps.config.webBaseUrl}/auth/verify?token=$token"
             deps.mailer.sendMagicLink(email, link)
-            call.respond(MagicLinkResponse(ok = true, devLink = if (deps.config.isProd) null else link))
+            // On screen only outside prod, and never for an admin during a public preview (the API log has it).
+            val showLink = !deps.config.isProd && !(preview && isAdmin)
+            call.respond(MagicLinkResponse(ok = true, devLink = if (showLink) link else null))
         }
 
         post("/verify") {

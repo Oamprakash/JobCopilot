@@ -27,6 +27,13 @@ data class AppConfig(
     val schedulerEnabled: Boolean = false,
     /** Tailored applications a free user may start per calendar month. */
     val freeTailorLimit: Int = 5,
+    /**
+     * Sharing a dev build publicly (e.g. through a Cloudflare tunnel). Only [inviteEmails] and admins may sign in,
+     * and admins' sign-in links are never shown on screen, only logged, so a visitor can't sign in as an admin.
+     */
+    val publicPreview: Boolean = false,
+    /** With [publicPreview]: who besides admins may sign in. Empty means anyone. */
+    val inviteEmails: Set<String> = emptySet(),
     /** Activity events (admin dashboard) are kept this many days. */
     val eventRetentionDays: Int = 180,
     /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
@@ -69,6 +76,8 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                publicPreview = env["PUBLIC_PREVIEW"]?.toBoolean() ?: false,
+                inviteEmails = env["INVITE_EMAILS"].orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet(),
                 eventRetentionDays = (env["EVENT_RETENTION_DAYS"]?.toInt() ?: 180).coerceAtLeast(1),
             )
         }
