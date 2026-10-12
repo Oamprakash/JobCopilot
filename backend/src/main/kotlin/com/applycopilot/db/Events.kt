@@ -25,6 +25,11 @@ object EventTypes {
     const val APPLICATION_APPROVED = "application_approved"
     const val RESUME_DOWNLOADED = "resume_downloaded"
     const val APPLY_CLICKED = "apply_clicked"
+    const val EXTENSION_CONNECTED = "extension_connected"
+    const val EXTENSION_AUTOFILL = "extension_autofill"
+    const val JOB_SAVED_FROM_PAGE = "job_saved_from_page"
+    const val MARKED_APPLIED = "marked_applied"
+    const val TRACKER_STAGE = "tracker_stage"
     /** Audit trail: an admin opened a user's activity. Recorded against the admin. */
     const val ADMIN_VIEWED_USER = "admin_viewed_user"
 

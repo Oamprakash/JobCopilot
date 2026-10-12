@@ -22,10 +22,22 @@ class Scheduler(
     private val firstRunDelay: Duration = Duration.ofMinutes(1),
     /** Activity events older than this are deleted on each run. */
     private val eventRetentionDays: Int = 180,
+    private val followUps: FollowUpReminders? = null,
+    /** Follow-up reminders go out on their own, shorter cycle so a due date isn't missed by a day. */
+    private val reminderInterval: Duration = Duration.ofHours(1),
 ) {
     private val log = LoggerFactory.getLogger(Scheduler::class.java)
 
     fun start(scope: CoroutineScope): Job = scope.launch {
+        followUps?.let { reminders ->
+            launch {
+                delay(firstRunDelay.toMillis())
+                while (isActive) {
+                    runCatching { reminders.sendDue() }.onFailure { log.error("Follow-up reminders failed", it) }
+                    delay(reminderInterval.toMillis())
+                }
+            }
+        }
         // A host that sleeps when idle (Render's free tier) restarts the app often; don't resync every wake-up
         // if the last sync is still within the interval.
         val last = runCatching { db.tx { Companies.lastSyncedAt(it) } }.getOrNull()

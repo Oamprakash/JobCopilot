@@ -1,5 +1,9 @@
 package com.applycopilot
 
+import com.applycopilot.jobs.FollowUpReminders
+import com.applycopilot.api.extensionRoutes
+import com.applycopilot.api.extensionPairingRoutes
+import com.applycopilot.api.trackerRoutes
 import com.applycopilot.api.adminDashboardRoutes
 import com.applycopilot.api.ErrorResponse
 import com.applycopilot.api.HealthResponse
@@ -99,6 +103,8 @@ fun Application.module(deps: Deps) {
             call.respond(HealthResponse("ok"))
         }
         authRoutes(deps)
+        // The browser extension authenticates with its own bearer token, not the session cookie.
+        extensionRoutes(deps)
         authenticate(SESSION_AUTH) {
             accountRoutes(deps)
             resumeRoutes(deps)
@@ -106,6 +112,8 @@ fun Application.module(deps: Deps) {
             applicationRoutes(deps)
             adminRoutes(deps)
             adminDashboardRoutes(deps)
+            trackerRoutes(deps)
+            extensionPairingRoutes(deps)
         }
     }
 
@@ -113,6 +121,7 @@ fun Application.module(deps: Deps) {
         Scheduler(
             deps.db, deps.ingestion, deps.matching, java.time.Duration.ofHours(deps.config.ingestIntervalHours),
             eventRetentionDays = deps.config.eventRetentionDays,
+            followUps = FollowUpReminders(deps.db, deps.mailer, deps.config.webBaseUrl),
         ).start(this)
     }
 

@@ -101,6 +101,26 @@ object Applications {
             st.executeQuery().use { rs -> if (rs.next()) rs.toApplication() else null }
         }
 
+    data class Recent(val jobId: UUID, val title: String, val company: String, val status: String, val applyUrl: String)
+
+    /** The user's latest applications with their job, approved ones first. */
+    fun recent(c: Connection, userId: UUID, limit: Int = 20): List<Recent> =
+        c.prepareStatement(
+            """
+            SELECT a.job_id, j.title, coalesce(j.employer, co.name), a.status, j.apply_url
+            FROM applications a JOIN jobs j ON j.id = a.job_id JOIN companies co ON co.id = j.company_id
+            WHERE a.user_id = ?
+            ORDER BY (a.status = 'approved') DESC, a.updated_at DESC
+            LIMIT ?
+            """.trimIndent(),
+        ).use { st ->
+            st.setObject(1, userId)
+            st.setInt(2, limit)
+            st.executeQuery().use { rs ->
+                buildList { while (rs.next()) add(Recent(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5))) }
+            }
+        }
+
     /** Applications started this calendar month (regenerating one doesn't count again). */
     fun createdThisMonth(c: Connection, userId: UUID): Int =
         c.prepareStatement("SELECT count(*) FROM applications WHERE user_id = ? AND created_at >= date_trunc('month', now())").use { st ->

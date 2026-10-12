@@ -1,20 +1,36 @@
 package com.applycopilot
 
 import com.applycopilot.api.ApplicationDto
+import com.applycopilot.api.AppliedRequest
+import com.applycopilot.api.AutofillResponse
 import com.applycopilot.api.EditApplicationRequest
+import com.applycopilot.api.ExtMeResponse
+import com.applycopilot.api.ExtensionStatusResponse
 import com.applycopilot.api.FeedResponse
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
+import com.applycopilot.api.ManualJobRequest
+import com.applycopilot.api.PairCodeResponse
+import com.applycopilot.api.PairRequest
+import com.applycopilot.api.PairResponse
 import com.applycopilot.api.ResumeUploadResponse
+import com.applycopilot.api.SaveJobRequest
+import com.applycopilot.api.SaveJobResponse
 import com.applycopilot.api.SaveProfileRequest
+import com.applycopilot.api.StageResponse
 import com.applycopilot.api.TailorRequest
+import com.applycopilot.api.TrackerItemDto
+import com.applycopilot.api.TrackerResponse
+import com.applycopilot.api.TrackerUpdateRequest
 import com.applycopilot.api.UsageDto
 import com.applycopilot.api.VerifyRequest
+import com.applycopilot.auth.ConsoleMailer
 import com.applycopilot.config.AppConfig
 import com.applycopilot.core.Preferences
 import com.applycopilot.core.RemoteMode
 import com.applycopilot.db.Companies
 import com.applycopilot.jobs.BoardFixtures
+import com.applycopilot.jobs.FollowUpReminders
 import com.applycopilot.tailoring.Change
 import com.applycopilot.tailoring.TailoredBullet
 import io.ktor.client.HttpClient
@@ -23,6 +39,8 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
@@ -40,14 +58,16 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
-import org.apache.pdfbox.Loader
-import org.apache.pdfbox.text.PDFTextStripper
 import java.nio.file.Files
+import java.time.Duration
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.apache.pdfbox.Loader
+import org.apache.pdfbox.text.PDFTextStripper
 
 class TailorApiTest {
     private val json = headersOf(HttpHeaders.ContentType, "application/json")
@@ -227,6 +247,98 @@ class TailorApiTest {
         val cleared = client.post("/applications/$jobId/tailor") { contentType(ContentType.Application.Json); setBody(body("")) }.body<ApplicationDto>()
         assertEquals(null, cleared.pastedDescription)
         assertFalse("Rust" in cleared.keywordsMissing)
+    }
+
+    @Test
+    fun extensionPairsAutofillsSavesJobsAndTracksApplications() = withApp { deps ->
+        val client = newClient()
+        val jobId = client.onboardAndFeed().getValue("Senior Android Engineer")
+        client.tailor(jobId)
+        client.post("/applications/$jobId/approve")
+
+        // Pairing: a one-time code from the web app becomes the extension's token.
+        assertEquals(0, client.get("/extension").body<ExtensionStatusResponse>().connected)
+        val code = client.post("/extension/pair-code").body<PairCodeResponse>().code
+        assertEquals(8, code.length)
+        val ext = createClient { install(ContentNegotiation) { json(apiJson) } }
+        assertEquals(HttpStatusCode.Unauthorized, ext.get("/ext/me").status)
+        val token = ext.post("/ext/pair") { contentType(ContentType.Application.Json); setBody(PairRequest(code.lowercase())) }.body<PairResponse>().token
+        assertEquals(HttpStatusCode.Unauthorized, ext.post("/ext/pair") { contentType(ContentType.Application.Json); setBody(PairRequest(code)) }.status, "codes work once")
+        assertEquals(1, client.get("/extension").body<ExtensionStatusResponse>().connected)
+        suspend fun HttpClient.authed(path: String) = get(path) { bearerAuth(token) }
+        assertEquals("oam@example.com", ext.authed("/ext/me").body<ExtMeResponse>().email)
+
+        // On the job's Greenhouse form, the approved application is matched by URL.
+        val onForm = ext.authed("/ext/autofill?url=https://job-boards.greenhouse.io/acme/jobs/101%23app").body<AutofillResponse>()
+        assertEquals("Oamprakash", onForm.profile.firstName)
+        assertEquals("R", onForm.profile.lastName)
+        val application = onForm.application!!
+        assertEquals(jobId, application.jobId)
+        assertEquals("approved", application.status)
+        assertTrue(application.coverLetter.contains("Acme"))
+        assertTrue(application.answers.any { it.question == "What is your notice period?" && it.answer == "60 days" })
+        assertFalse(application.answers.any { it.question.contains("CTC") }, "answers left for the user aren't filled")
+        val pdf = ext.authed(application.resumePath)
+        assertEquals(ContentType.Application.Pdf, pdf.contentType()?.withoutParameters())
+        // Elsewhere (e.g. after a redirect), nothing matches, but recent applications can be picked.
+        val elsewhere = ext.authed("/ext/autofill?url=https://careers.example.com/apply/9").body<AutofillResponse>()
+        assertNull(elsewhere.application)
+        assertEquals(listOf(jobId), elsewhere.recent.map { it.jobId })
+        assertEquals(jobId, ext.authed("/ext/autofill?url=x&jobId=$jobId").body<AutofillResponse>().application?.jobId)
+
+        // Saving a page: an unknown job is kept as a saved job; a known job's page reuses that job.
+        val saved = ext.post("/ext/save") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody(SaveJobRequest("https://careers.example.com/jobs/42", "Staff Android Engineer", "Example Co", "Pune", "Build things."))
+        }.body<SaveJobResponse>()
+        assertEquals("saved", saved.stage)
+        assertFalse(saved.alreadyTracked)
+        val known = ext.post("/ext/save") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody(SaveJobRequest("https://boards.greenhouse.io/acme/jobs/101", "Senior Android Engineer", "Acme"))
+        }.body<SaveJobResponse>()
+        assertEquals(jobId, known.jobId)
+
+        // "I submitted it": applied, with a follow-up a week out.
+        assertEquals("applied", ext.post("/ext/applied") { bearerAuth(token); contentType(ContentType.Application.Json); setBody(AppliedRequest(jobId)) }.body<StageResponse>().stage)
+        var tracker = client.get("/tracker").body<TrackerResponse>()
+        assertEquals(mapOf("saved" to 1, "applied" to 1), tracker.counts.filterValues { it > 0 })
+        val applied = tracker.items.single { it.jobId == jobId }
+        assertEquals("approved", applied.applicationStatus)
+        assertTrue(Instant.parse(applied.followUpAt!!).isAfter(Instant.now().plus(Duration.ofDays(6))))
+        assertEquals("Example Co", tracker.items.single { it.jobId == saved.jobId }.company)
+        // Saved-from-page jobs never enter anyone's feed.
+        assertFalse(client.post("/feed/refresh").body<FeedResponse>().jobs.any { it.title == "Staff Android Engineer" })
+
+        // Moving through stages, notes and follow-ups; a due follow-up is emailed once.
+        val due = Instant.now().minus(Duration.ofHours(1)).toString()
+        val updated = client.put("/tracker/$jobId") {
+            contentType(ContentType.Application.Json); setBody(TrackerUpdateRequest(stage = "interview", followUpAt = due, notes = "Recruiter: Priya"))
+        }.body<TrackerItemDto>()
+        assertEquals("interview", updated.stage)
+        assertTrue(updated.followUpDue)
+        assertEquals("Recruiter: Priya", updated.notes)
+        assertEquals(HttpStatusCode.BadRequest, client.put("/tracker/$jobId") { contentType(ContentType.Application.Json); setBody(TrackerUpdateRequest(stage = "ghosted")) }.status)
+        val reminders = FollowUpReminders(deps.db, deps.mailer, deps.config.webBaseUrl)
+        assertEquals(1, reminders.sendDue())
+        assertEquals(0, reminders.sendDue(), "each due date is reminded once")
+        val mail = (deps.mailer as ConsoleMailer).followUps.single()
+        assertEquals("oam@example.com", mail.first)
+        assertEquals(listOf("Senior Android Engineer" to "Acme"), mail.second)
+
+        val manual = client.post("/tracker/manual") {
+            contentType(ContentType.Application.Json); setBody(ManualJobRequest("Mobile Lead", "Referral Co", "https://referral.example.com/job/7", stage = "applied"))
+        }.body<TrackerItemDto>()
+        assertEquals("applied", manual.stage)
+        assertEquals(HttpStatusCode.BadRequest, client.post("/tracker/manual") { contentType(ContentType.Application.Json); setBody(ManualJobRequest("X", "Y", "not a link")) }.status)
+        assertEquals(HttpStatusCode.OK, client.delete("/tracker/${manual.jobId}").status)
+        tracker = client.get("/tracker").body<TrackerResponse>()
+        assertEquals(2, tracker.items.size)
+        assertEquals(1, tracker.dueCount)
+
+        // Disconnecting revokes the token.
+        client.delete("/extension")
+        assertEquals(HttpStatusCode.Unauthorized, ext.authed("/ext/me").status)
     }
 
     @Test
