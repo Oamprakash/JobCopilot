@@ -7,6 +7,10 @@ const cities: [string, ...string[]][] = [
   ["Noida", "Greater Noida"], ["Kolkata", "Calcutta"], ["Ahmedabad"], ["Coimbatore"], ["Kochi", "Cochin"],
   ["Thiruvananthapuram", "Trivandrum"], ["Mysuru", "Mysore"], ["Visakhapatnam", "Vizag"], ["Jaipur"], ["Indore"],
   ["Chandigarh"], ["Lucknow"], ["Nagpur"], ["Bhubaneswar"], ["Madurai"],
+  ["Singapore"], ["Dubai"], ["Abu Dhabi"], ["Sharjah"], ["Kuala Lumpur"], ["Penang", "George Town", "Bayan Lepas"],
+  ["Cyberjaya"], ["Petaling Jaya"], ["Johor Bahru"],
+  // Whole countries: match a job anywhere in them.
+  ["India"], ["Malaysia"], ["UAE", "United Arab Emirates"],
 ];
 
 const roles = [

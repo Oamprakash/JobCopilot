@@ -59,7 +59,7 @@ class IngestionService(
         val company = db.tx { c -> Companies.active(c).firstOrNull { it.ats == ADZUNA } } ?: return null
         val queries = db.tx { c ->
             val profile = Profiles.latest(c, userId)?.profile ?: return@tx emptyList()
-            SearchQueries.forUser(profile, PreferencesTable.find(c, userId) ?: Preferences())
+            SearchQueries.forUser(profile, PreferencesTable.find(c, userId) ?: Preferences(), home = adzuna.homeCountry)
         }
         if (queries.isEmpty()) return null
         return runSearches(company, queries, maxPages = 1)
@@ -92,7 +92,7 @@ class IngestionService(
         SearchQueries.merge(
             MatchRuns.usersWithProfiles(c).mapNotNull { userId ->
                 val profile = Profiles.latest(c, userId)?.profile ?: return@mapNotNull null
-                SearchQueries.forUser(profile, PreferencesTable.find(c, userId) ?: Preferences())
+                SearchQueries.forUser(profile, PreferencesTable.find(c, userId) ?: Preferences(), home = adzuna?.homeCountry ?: "in")
             },
         )
     }
@@ -117,7 +117,7 @@ class IngestionService(
 
         for (query in queries) {
             if (budgetSpent) break
-            val last = db.tx { c -> AggregatorQueries.lastRun(c, ADZUNA, query.what, query.where) }
+            val last = db.tx { c -> AggregatorQueries.lastRun(c, ADZUNA, query.country, query.what, query.where) }
             if (last != null && last.isAfter(cutoff)) continue
             ran++
             var total: Int? = null
@@ -142,10 +142,10 @@ class IngestionService(
             if (error != null) {
                 errors++
                 lastError = error
-                log.warn("Adzuna search '{}' in '{}' failed: {}", query.what, query.where, error)
+                log.warn("Adzuna search '{}' in '{}' ({}) failed: {}", query.what, query.where, query.country, error)
             }
             // A search cut short by the budget before its first page stays unrecorded, so it runs next time.
-            if (error != null || total != null) db.tx { c -> AggregatorQueries.record(c, ADZUNA, query.what, query.where, total, error) }
+            if (error != null || total != null) db.tx { c -> AggregatorQueries.record(c, ADZUNA, query.country, query.what, query.where, total, error) }
         }
         if (budgetSpent) log.info("Adzuna: today's budget of {} calls is spent; remaining searches run tomorrow", adzunaDailyCalls)
 

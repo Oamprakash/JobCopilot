@@ -31,9 +31,14 @@ class AdzunaClient(
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    /** Where searches without a known country go (ADZUNA_COUNTRY, default India). */
+    val homeCountry: String get() = config.country
+
+    /** Searches [query] in its own country (a Singapore search goes to Adzuna Singapore). */
     suspend fun search(query: SearchQuery, page: Int = 1): SearchPage {
-        require(Regex("^[a-z]{2}$").matches(config.country)) { "ADZUNA_COUNTRY must be a two-letter code" }
-        val response = http.get("$base/v1/api/jobs/${config.country}/search/$page") {
+        val country = query.country
+        require(Regex("^[a-z]{2}$").matches(country)) { "Country must be a two-letter code" }
+        val response = http.get("$base/v1/api/jobs/$country/search/$page") {
             parameter("app_id", config.appId)
             parameter("app_key", config.appKey)
             parameter("results_per_page", PAGE_SIZE)
@@ -57,7 +62,7 @@ class AdzunaClient(
         } catch (e: Exception) {
             throw AtsException("Adzuna returned invalid JSON")
         }
-        return parse(config.country, body)
+        return parse(country, body)
     }
 
     companion object {
@@ -65,7 +70,10 @@ class AdzunaClient(
         const val MAX_DAYS_OLD = 30
 
         private val remoteWords = Regex("\\b(remote|work from home|wfh)\\b", RegexOption.IGNORE_CASE)
-        private val countryNames = mapOf("in" to "India", "gb" to "United Kingdom", "us" to "United States", "sg" to "Singapore")
+        private val countryNames = mapOf(
+            "in" to "India", "sg" to "Singapore", "gb" to "United Kingdom", "us" to "United States", "au" to "Australia",
+            "ca" to "Canada", "de" to "Germany", "nl" to "Netherlands", "nz" to "New Zealand",
+        )
 
         internal fun parse(country: String, body: JsonElement): SearchPage {
             val o = body as? JsonObject ?: throw AtsException("Adzuna returned an unexpected shape")

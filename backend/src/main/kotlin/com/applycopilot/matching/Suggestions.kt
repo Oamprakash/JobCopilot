@@ -48,7 +48,10 @@ object Suggestions {
         fun gain(changed: Preferences) = relevant.count { HardFilter.evaluate(it, profile, changed).pass }
 
         val knownCities = prefs.locations.map { it.lowercase() }
+        // Suggest places in the countries the user already looks in (India when they haven't said), not a move abroad.
+        val countries = prefs.locations.mapNotNull { Locations.countryOf(it) }.toSet().ifEmpty { setOf("in") }
         val cityCandidates = relevant.flatMap { Locations.citiesIn(it.location) }
+            .filter { city -> Locations.countryOf(city) in countries }
             .filter { city -> knownCities.none { Locations.cityMatches(it, city) } }
             .distinct()
         val locations = cityCandidates

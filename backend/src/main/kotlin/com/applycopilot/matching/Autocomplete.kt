@@ -37,10 +37,14 @@ object Autocomplete {
     )
 
     fun options(jobs: List<OpenJob>): AutocompleteOptions {
-        val citiesPerJob = jobs.map { Locations.citiesIn(it.location).toSet() }
+        val jobLocations = jobs.groupingBy { it.location.lowercase() }.eachCount()
         val locations = Locations.cities
-            .map { city -> AutocompleteOption(city, citiesPerJob.count { city in it }, Locations.aliasesOf(city)) }
-            .sortedByDescending { it.count }
+            .map { place ->
+                val count = jobLocations.entries.sumOf { (location, n) -> if (Locations.cityMatches(place, location)) n else 0 }
+                AutocompleteOption(place, count, Locations.aliasesOf(place))
+            }
+            // Cities first, busiest first; whole countries ("India", "Malaysia") after, since they sum their cities.
+            .sortedWith(compareBy<AutocompleteOption> { Locations.isCountry(it.value) }.thenByDescending { it.count })
 
         val profile = Profile()
         val titles = jobs.groupingBy { it.title }.eachCount()

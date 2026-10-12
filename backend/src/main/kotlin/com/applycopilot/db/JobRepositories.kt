@@ -486,27 +486,32 @@ object MatchRuns {
 /** Searches run against an aggregator, and the per-day call count that keeps them inside its quota. */
 object AggregatorQueries {
     /** When this search last ran successfully, or null if it never has. */
-    fun lastRun(c: Connection, source: String, what: String, where: String): Instant? =
-        c.prepareStatement("SELECT last_run_at FROM aggregator_queries WHERE source = ? AND what = ? AND location = ? AND last_error IS NULL").use { st ->
+    fun lastRun(c: Connection, source: String, country: String, what: String, where: String): Instant? =
+        c.prepareStatement(
+            "SELECT last_run_at FROM aggregator_queries WHERE source = ? AND country = ? AND what = ? AND location = ? AND last_error IS NULL",
+        ).use { st ->
             st.setString(1, source)
-            st.setString(2, what)
-            st.setString(3, where)
+            st.setString(2, country)
+            st.setString(3, what)
+            st.setString(4, where)
             st.executeQuery().use { rs -> if (rs.next()) rs.getTimestamp(1)?.toInstant() else null }
         }
 
-    fun record(c: Connection, source: String, what: String, where: String, count: Int?, error: String?) {
+    fun record(c: Connection, source: String, country: String, what: String, where: String, count: Int?, error: String?) {
         c.prepareStatement(
             """
-            INSERT INTO aggregator_queries (source, what, location, last_run_at, last_count, last_error) VALUES (?, ?, ?, now(), ?, ?)
-            ON CONFLICT (source, what, location) DO UPDATE SET
+            INSERT INTO aggregator_queries (source, country, what, location, last_run_at, last_count, last_error)
+            VALUES (?, ?, ?, ?, now(), ?, ?)
+            ON CONFLICT (source, country, what, location) DO UPDATE SET
                 last_run_at = now(), last_count = EXCLUDED.last_count, last_error = EXCLUDED.last_error
             """.trimIndent(),
         ).use { st ->
             st.setString(1, source)
-            st.setString(2, what)
-            st.setString(3, where)
-            if (count == null) st.setNull(4, Types.INTEGER) else st.setInt(4, count)
-            if (error == null) st.setNull(5, Types.VARCHAR) else st.setString(5, error.take(500))
+            st.setString(2, country)
+            st.setString(3, what)
+            st.setString(4, where)
+            if (count == null) st.setNull(5, Types.INTEGER) else st.setInt(5, count)
+            if (error == null) st.setNull(6, Types.VARCHAR) else st.setString(6, error.take(500))
             st.executeUpdate()
         }
     }

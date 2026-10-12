@@ -161,6 +161,11 @@ class AtsClientTest {
         // Searching the whole country sends no "where".
         adzuna.search(SearchQuery("android", ""))
         assertEquals(null, urls.last().parameters["where"])
+
+        // Each search goes to its own country's endpoint.
+        val sg = adzuna.search(SearchQuery("android", "singapore", "sg"))
+        assertEquals("/v1/api/jobs/sg/search/1", urls.last().encodedPath)
+        assertEquals("sg:4810001", sg.postings.first().sourceJobId)
     }
 
     @Test

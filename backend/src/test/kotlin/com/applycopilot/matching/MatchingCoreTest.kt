@@ -61,6 +61,20 @@ class MatchingCoreTest {
         assertTrue(Locations.cityMatches("Gurgaon", "Gurugram"))
         assertFalse(Locations.cityMatches("Chennai", "Bengaluru, India"))
         assertFalse(Locations.cityMatches("Pune", "Punekar Street, Seattle"))
+        // Abroad, and whole-country choices.
+        assertTrue(Locations.cityMatches("Singapore", "Singapore"))
+        assertTrue(Locations.cityMatches("Dubai", "Dubai - United Arab Emirates"))
+        assertTrue(Locations.cityMatches("UAE", "Abu Dhabi"))
+        assertTrue(Locations.cityMatches("uae", "Remote, United Arab Emirates"))
+        assertTrue(Locations.cityMatches("Malaysia", "Kuala Lumpur"))
+        assertTrue(Locations.cityMatches("Malaysia", "Bayan Lepas, Penang"))
+        assertFalse(Locations.cityMatches("Malaysia", "Singapore"))
+        assertFalse(Locations.cityMatches("Dubai", "Abu Dhabi"))
+        assertTrue(Locations.cityMatches("India", "Bangalore"))
+        assertEquals("ae", Locations.countryOf("dubai"))
+        assertEquals(null, Locations.countryOf("Atlantis"))
+        assertEquals(listOf("Kuala Lumpur"), Locations.citiesIn("Kuala Lumpur, Malaysia"))
+        assertFalse(Locations.mentionsIndia("Singapore"))
     }
 
     @Test

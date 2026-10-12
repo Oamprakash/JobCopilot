@@ -25,54 +25,96 @@ data class FitScore(val score: Int, val reasons: List<String>, val missingSkills
 // ---- Locations ------------------------------------------------------------------------------
 
 object Locations {
-    private val aliasGroups: List<Set<String>> = listOf(
-        setOf("bengaluru", "bangalore", "blr"),
-        setOf("mumbai", "bombay", "navi mumbai", "thane"),
-        setOf("chennai", "madras"),
-        setOf("hyderabad", "secunderabad"),
-        setOf("pune"),
-        setOf("delhi", "new delhi", "ncr", "delhi ncr"),
-        setOf("gurugram", "gurgaon"),
-        setOf("noida", "greater noida"),
-        setOf("kolkata", "calcutta"),
-        setOf("ahmedabad"),
-        setOf("coimbatore"),
-        setOf("kochi", "cochin"),
-        setOf("thiruvananthapuram", "trivandrum"),
-        setOf("mysuru", "mysore"),
-        setOf("visakhapatnam", "vizag"),
-        setOf("jaipur"), setOf("indore"), setOf("chandigarh"), setOf("lucknow"), setOf("nagpur"), setOf("bhubaneswar"),
-        setOf("madurai"),
-    )
+    /**
+     * A place the filter knows by name. [country] is an ISO 3166 code. A country-level place ("Malaysia")
+     * matches a job anywhere in that country; a city matches its own names only.
+     */
+    private data class Place(val display: String, val aliases: List<String>, val country: String, val isCountry: Boolean = false) {
+        val names: List<String> = listOf(display.lowercase()) + aliases
+    }
 
-    private val indiaWords: Set<String> = aliasGroups.flatten().toSet() + setOf("india")
+    private fun india(display: String, vararg aliases: String) = Place(display, aliases.toList(), "in")
+
+    private val places: List<Place> = listOf(
+        india("Bengaluru", "bangalore", "blr"),
+        india("Mumbai", "bombay", "navi mumbai", "thane"),
+        india("Chennai", "madras"),
+        india("Hyderabad", "secunderabad"),
+        india("Pune"),
+        india("Delhi", "new delhi", "ncr", "delhi ncr"),
+        india("Gurugram", "gurgaon"),
+        india("Noida", "greater noida"),
+        india("Kolkata", "calcutta"),
+        india("Ahmedabad"),
+        india("Coimbatore"),
+        india("Kochi", "cochin"),
+        india("Thiruvananthapuram", "trivandrum"),
+        india("Mysuru", "mysore"),
+        india("Visakhapatnam", "vizag"),
+        india("Jaipur"), india("Indore"), india("Chandigarh"), india("Lucknow"), india("Nagpur"), india("Bhubaneswar"),
+        india("Madurai"),
+        // Abroad: the Gulf and Southeast Asia hubs Indian engineers most often move to.
+        Place("Singapore", emptyList(), "sg"),
+        Place("Dubai", emptyList(), "ae"),
+        Place("Abu Dhabi", emptyList(), "ae"),
+        Place("Sharjah", emptyList(), "ae"),
+        Place("Kuala Lumpur", emptyList(), "my"),
+        Place("Penang", listOf("george town", "bayan lepas"), "my"),
+        Place("Cyberjaya", emptyList(), "my"),
+        Place("Petaling Jaya", emptyList(), "my"),
+        Place("Johor Bahru", emptyList(), "my"),
+        Place("India", emptyList(), "in", isCountry = true),
+        Place("Malaysia", emptyList(), "my", isCountry = true),
+        Place("UAE", listOf("united arab emirates"), "ae", isCountry = true),
+    )
+    private val countryNames = mapOf("in" to listOf("india"), "sg" to listOf("singapore"), "ae" to listOf("uae", "united arab emirates"), "my" to listOf("malaysia"))
+
+    private val indiaWords: Set<String> = places.filter { it.country == "in" }.flatMap { it.names }.toSet() + setOf("india")
     private val remoteRegions = setOf("apac", "asia", "anywhere", "worldwide", "global")
 
-    private fun has(text: String, word: String) = Regex("(?<![a-z])${Regex.escape(word)}(?![a-z])").containsMatchIn(text)
+    private val wordRegexes = java.util.concurrent.ConcurrentHashMap<String, Regex>()
+    private fun has(text: String, word: String) =
+        wordRegexes.computeIfAbsent(word) { Regex("(?<![a-z])${Regex.escape(it)}(?![a-z])") }.containsMatchIn(text)
 
-    private fun displayName(group: Set<String>) = group.first().split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+    private fun titleCase(s: String) = s.split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
 
-    /** Every Indian city the filter knows by name, as display names. */
-    val cities: List<String> get() = aliasGroups.map(::displayName)
+    private fun placeNamed(name: String): Place? = name.trim().lowercase().let { n -> places.firstOrNull { n in it.names } }
 
-    /** Other names the filter accepts for a city ("Bengaluru" → ["Bangalore", "Blr"]). */
-    fun aliasesOf(city: String): List<String> =
-        aliasGroups.firstOrNull { displayName(it) == city }?.drop(1)?.map { a -> displayName(setOf(a)) }.orEmpty()
+    /** Every place the filter knows by name, as display names: Indian cities first, then abroad. */
+    val cities: List<String> get() = places.map { it.display }
 
-    /** Indian cities named in a job location, as display names ("Bangalore, KA" → ["Bengaluru"]). */
+    /** Other names the filter accepts for a place ("Bengaluru" → ["Bangalore", "Blr"]). */
+    fun aliasesOf(city: String): List<String> = places.firstOrNull { it.display == city }?.aliases?.map(::titleCase).orEmpty()
+
+    /** The country code of a known place name ("Bangalore" → "in", "Dubai" → "ae"), or null for one we don't know. */
+    fun countryOf(name: String): String? = placeNamed(name)?.country
+
+    /** True for a whole-country choice such as "Malaysia" or "UAE". */
+    fun isCountry(name: String): Boolean = placeNamed(name)?.isCountry == true
+
+    /** Known cities named in a job location, as display names ("Bangalore, KA" → ["Bengaluru"]). */
     fun citiesIn(location: String): List<String> {
         val l = location.lowercase()
-        return aliasGroups.filter { group -> group.any { has(l, it) } }.map(::displayName)
+        return places.filter { !it.isCountry && it.names.any { n -> has(l, n) } }.map { it.display }
     }
 
     fun mentionsIndia(location: String): Boolean = location.lowercase().let { l -> indiaWords.any { has(l, it) } }
 
+    /**
+     * Whether a job location fits one of the user's locations: any name of that city, any place in that country for
+     * a country choice, or the words as typed for a place we don't know.
+     */
     fun cityMatches(userCity: String, jobLocation: String): Boolean {
         val u = userCity.trim().lowercase()
         if (u.isEmpty()) return false
-        val group = aliasGroups.firstOrNull { u in it } ?: setOf(u)
+        val place = places.firstOrNull { u in it.names }
+        val names = when {
+            place == null -> listOf(u)
+            place.isCountry -> places.filter { it.country == place.country }.flatMap { it.names } + countryNames[place.country].orEmpty()
+            else -> place.names
+        }
         val l = jobLocation.lowercase()
-        return group.any { has(l, it) }
+        return names.any { has(l, it) }
     }
 
     fun isRemote(job: JobForMatching): Boolean =

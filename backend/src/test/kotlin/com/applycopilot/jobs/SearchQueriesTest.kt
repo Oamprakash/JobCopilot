@@ -48,4 +48,24 @@ class SearchQueriesTest {
         val b = SearchQuery("android", "pune")
         assertEquals(listOf(b, a), SearchQueries.merge(listOf(listOf(a, b), listOf(b))))
     }
+
+    @Test
+    fun placesAbroadSearchTheirOwnCountryWhenCovered() {
+        val prefs = Preferences(roles = listOf("Android Engineer"), locations = listOf("Chennai", "Singapore", "Dubai", "Malaysia", "Atlantis"))
+        assertEquals(
+            listOf(
+                SearchQuery("android", "chennai", "in"),
+                SearchQuery("android", "singapore", "sg"),
+                // Dubai and Malaysia: not covered by Adzuna, so only the job boards serve them. Unknown places stay at home.
+                SearchQuery("android", "atlantis", "in"),
+            ),
+            SearchQueries.forUser(profile, prefs),
+        )
+        // A country choice searches the whole country.
+        assertEquals(
+            listOf(SearchQuery("android", "", "my")),
+            SearchQueries.forUser(profile, Preferences(locations = listOf("Malaysia")), supported = setOf("my")),
+        )
+        assertEquals(emptyList<SearchQuery>(), SearchQueries.forUser(profile, Preferences(locations = listOf("Dubai", "Kuala Lumpur"))))
+    }
 }
