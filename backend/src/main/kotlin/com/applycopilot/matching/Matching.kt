@@ -50,6 +50,13 @@ object Locations {
 
     private fun has(text: String, word: String) = Regex("(?<![a-z])${Regex.escape(word)}(?![a-z])").containsMatchIn(text)
 
+    /** Indian cities named in a job location, as display names ("Bangalore, KA" → ["Bengaluru"]). */
+    fun citiesIn(location: String): List<String> {
+        val l = location.lowercase()
+        return aliasGroups.filter { group -> group.any { has(l, it) } }
+            .map { group -> group.first().split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } } }
+    }
+
     fun mentionsIndia(location: String): Boolean = location.lowercase().let { l -> indiaWords.any { has(l, it) } }
 
     fun cityMatches(userCity: String, jobLocation: String): Boolean {
@@ -214,6 +221,11 @@ object LexicalRanker {
 
 /** Rule-based fit score used without an API key, past the daily LLM budget, or when the LLM call fails. */
 object HeuristicScorer {
+    /** Tokenized text padded with spaces, for repeated phrase checks against one long JD. */
+    fun normalizedText(text: String): String = " " + HardFilter.tokens(text).joinToString(" ") + " "
+
+    fun normalizedPhrase(phrase: String): String = HardFilter.tokens(phrase).joinToString(" ")
+
     fun containsPhrase(text: String, phrase: String): Boolean {
         val t = " " + HardFilter.tokens(text).joinToString(" ") + " "
         val p = HardFilter.tokens(phrase).joinToString(" ")

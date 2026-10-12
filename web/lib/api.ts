@@ -76,7 +76,11 @@ export type MatchRun = {
   error: string | null;
   /** Jobs the hard filter dropped, by reason. */
   filtered?: Partial<Record<"role" | "location" | "experience" | "seniority" | "skippedCompany" | "other", number>>;
+  /** Single preference changes that would bring in more relevant jobs, best first. */
+  suggestions?: Suggestion[];
 };
+
+export type Suggestion = { kind: "location" | "role" | "remote"; value: string; count: number };
 
 export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean };
 

@@ -3,6 +3,8 @@ package com.applycopilot.db
 import com.applycopilot.jobs.JobPosting
 import com.applycopilot.matching.FitScore
 import com.applycopilot.matching.JobForMatching
+import com.applycopilot.matching.Suggestion
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -306,11 +308,13 @@ data class MatchRun(
     val error: String?,
     /** Jobs the hard filter dropped, by reason: role, location, experience, seniority, skippedCompany. */
     val filtered: Map<String, Int> = emptyMap(),
+    val suggestions: List<Suggestion> = emptyList(),
 )
 
 object MatchRuns {
     private val json = Json { ignoreUnknownKeys = true }
     private val countsSerializer = MapSerializer(String.serializer(), Int.serializer())
+    private val suggestionsSerializer = ListSerializer(Suggestion.serializer())
 
     fun start(c: Connection, userId: UUID): UUID {
         val id = UUID.randomUUID()
@@ -331,11 +335,12 @@ object MatchRuns {
         llm: Int,
         error: String? = null,
         filtered: Map<String, Int> = emptyMap(),
+        suggestions: List<Suggestion> = emptyList(),
     ) {
         c.prepareStatement(
             """
             UPDATE match_runs SET finished_at = now(), considered = ?, passed_filter = ?, scored = ?, llm_scored = ?, error = ?,
-                filtered = CAST(? AS jsonb)
+                filtered = CAST(? AS jsonb), suggestions = CAST(? AS jsonb)
             WHERE id = ?
             """.trimIndent(),
         ).use { st ->
@@ -345,7 +350,8 @@ object MatchRuns {
             st.setInt(4, llm)
             st.setString(5, error?.take(500))
             st.setString(6, json.encodeToString(countsSerializer, filtered))
-            st.setObject(7, id)
+            st.setString(7, json.encodeToString(suggestionsSerializer, suggestions))
+            st.setObject(8, id)
             st.executeUpdate()
         }
     }
@@ -353,7 +359,7 @@ object MatchRuns {
     fun latest(c: Connection, userId: UUID): MatchRun? =
         c.prepareStatement(
             """
-            SELECT id, started_at, finished_at, considered, passed_filter, scored, llm_scored, error, filtered
+            SELECT id, started_at, finished_at, considered, passed_filter, scored, llm_scored, error, filtered, suggestions
             FROM match_runs WHERE user_id = ? ORDER BY started_at DESC LIMIT 1
             """.trimIndent(),
         ).use { st ->
@@ -369,6 +375,7 @@ object MatchRuns {
                     llmScored = rs.getInt("llm_scored"),
                     error = rs.getString("error"),
                     filtered = rs.getString("filtered")?.let { runCatching { json.decodeFromString(countsSerializer, it) }.getOrNull() }.orEmpty(),
+                    suggestions = rs.getString("suggestions")?.let { runCatching { json.decodeFromString(suggestionsSerializer, it) }.getOrNull() }.orEmpty(),
                 )
             }
         }

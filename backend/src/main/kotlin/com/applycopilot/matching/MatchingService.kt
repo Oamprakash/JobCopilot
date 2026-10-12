@@ -53,6 +53,7 @@ class MatchingService(
             val verdicts = setup.candidates.map { it to HardFilter.evaluate(it, setup.profile, setup.prefs) }
             val passed = verdicts.filter { it.second.pass }.map { it.first }
             val filtered = verdicts.filterNot { it.second.pass }.groupingBy { filterCategory(it.second.reason) }.eachCount()
+            val suggestions = Suggestions.compute(verdicts.filterNot { it.second.pass }.map { it.first }, setup.profile, setup.prefs)
             val shortlist = LexicalRanker.rank(passed, setup.profile).take(shortlistSize)
             val budget = if (claude == null) 0 else (dailyLlmLimit - setup.llmUsed).coerceAtLeast(0)
             val forLlm = shortlist.take(budget)
@@ -67,7 +68,7 @@ class MatchingService(
 
             db.tx { c ->
                 scored.forEach { (job, fit, scorer) -> Matches.insert(c, userId, job.id, fit, scorer, setup.profileVersion) }
-                MatchRuns.finish(c, setup.runId, setup.candidates.size, passed.size, scored.size, llmCount, filtered = filtered)
+                MatchRuns.finish(c, setup.runId, setup.candidates.size, passed.size, scored.size, llmCount, filtered = filtered, suggestions = suggestions)
             }
             log.info("Matching for {}: {} candidates, {} passed, {} scored ({} by Claude)", userId, setup.candidates.size, passed.size, scored.size, llmCount)
         } catch (e: Exception) {

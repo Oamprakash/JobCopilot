@@ -15,6 +15,7 @@ import com.applycopilot.core.Preferences
 import com.applycopilot.core.RemoteMode
 import com.applycopilot.db.Companies
 import com.applycopilot.jobs.BoardFixtures
+import com.applycopilot.matching.Suggestion
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.mock.MockEngine
@@ -196,6 +197,23 @@ class FeedApiTest {
 
         assertEquals(HttpStatusCode.BadRequest, client.get("/feed?status=bogus").status)
         assertEquals(HttpStatusCode.NotFound, client.put("/feed/not-a-uuid/status") { contentType(ContentType.Application.Json); setBody(StatusRequest("saved")) }.status)
+    }
+
+    @Test
+    fun suggestsCitiesThatWouldWidenTheFeed() = withApp { deps ->
+        deps.ingestion.syncAll()
+        val client = newClient()
+        val chennaiOnly = prefs.copy(locations = listOf("Chennai"))
+        client.onboard(chennaiOnly)
+        val feed = client.post("/feed/refresh").body<FeedResponse>()
+        assertFalse(feed.jobs.any { it.title == "Senior Android Engineer" })
+        assertEquals(listOf(Suggestion("location", "Bengaluru", 1)), feed.lastRun!!.suggestions)
+
+        // Taking the suggestion brings the Bengaluru job in.
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(chennaiOnly.copy(locations = listOf("Chennai", "Bengaluru"))) }
+        val widened = client.post("/feed/refresh").body<FeedResponse>()
+        assertTrue(widened.jobs.any { it.title == "Senior Android Engineer" })
+        assertTrue(widened.lastRun!!.suggestions.isEmpty())
     }
 
     @Test

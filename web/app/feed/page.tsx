@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, ApiError, type Feed, type FeedJob, type JobDetail, type MatchStatus, type Preferences } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  type Feed,
+  type FeedJob,
+  type JobDetail,
+  type MatchStatus,
+  type Preferences,
+  type Suggestion,
+} from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 
 const tabs: { status: MatchStatus; label: string }[] = [
@@ -70,6 +79,29 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, status]);
 
+  // One tap widens the preferences and rebuilds the feed with the change.
+  async function applySuggestion(s: Suggestion) {
+    if (!prefs) return;
+    const next: Preferences =
+      s.kind === "location"
+        ? { ...prefs, locations: [...prefs.locations, s.value] }
+        : s.kind === "role"
+          ? { ...prefs, roles: [...prefs.roles, s.value] }
+          : { ...prefs, remoteMode: "any" };
+    setRefreshing(true);
+    setError(null);
+    try {
+      setPrefs(await api.savePreferences(next));
+      const fresh = await api.refreshFeed();
+      setStatus("new");
+      setFeed(fresh);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function move(job: FeedJob, to: MatchStatus) {
     setFeed((f) => (f ? { ...f, jobs: f.jobs.filter((j) => j.jobId !== job.jobId) } : f));
     try {
@@ -106,6 +138,9 @@ export default function FeedPage() {
               Edit preferences
             </Link>
           </section>
+          {status === "new" && (lastRun?.suggestions?.length ?? 0) > 0 && (
+            <SuggestionsCard suggestions={lastRun!.suggestions!} onApply={applySuggestion} busy={refreshing} />
+          )}
           <section className="card stack" style={{ gap: 8 }}>
             <h2>How matching works</h2>
             <p className="muted small" style={{ margin: 0 }}>
@@ -154,6 +189,37 @@ export default function FeedPage() {
         </section>
       </main>
     </>
+  );
+}
+
+function suggestionLabel(s: Suggestion): string {
+  if (s.kind === "location") return `Add ${s.value}`;
+  if (s.kind === "role") return `Add role: ${s.value}`;
+  return "Include remote jobs in India";
+}
+
+function SuggestionsCard({ suggestions, onApply, busy }: { suggestions: Suggestion[]; onApply: (s: Suggestion) => void; busy: boolean }) {
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2>Widen your search</h2>
+      <p className="muted small" style={{ margin: 0 }}>
+        Jobs that fit your skills but were filtered out. One tap updates your preferences.
+      </p>
+      {suggestions.map((s) => (
+        <button
+          key={`${s.kind}:${s.value}`}
+          type="button"
+          className="btn btn-secondary suggestion"
+          disabled={busy}
+          onClick={() => onApply(s)}
+        >
+          <span>{suggestionLabel(s)}</span>
+          <span className="suggestion-count">
+            +{s.count} job{s.count === 1 ? "" : "s"}
+          </span>
+        </button>
+      ))}
+    </section>
   );
 }
 
@@ -243,7 +309,8 @@ function EmptyState({ status, feed }: { status: MatchStatus; feed: Feed }) {
       )}
       {reasons.length > 0 && (
         <p className="small" style={{ margin: 0 }}>
-          <Link href="/profile">Widen your roles or locations</Link> to bring more in.
+          {(run?.suggestions?.length ?? 0) > 0 ? "Try a suggestion under “Widen your search”, or " : ""}
+          <Link href="/profile">edit your roles and locations</Link>.
         </p>
       )}
     </div>

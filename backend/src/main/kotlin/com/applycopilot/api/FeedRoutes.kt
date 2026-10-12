@@ -12,6 +12,7 @@ import com.applycopilot.db.Users
 import com.applycopilot.jobs.Ats
 import com.applycopilot.jobs.AtsClient
 import com.applycopilot.jobs.SyncResult
+import com.applycopilot.matching.Suggestion
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
@@ -57,6 +58,7 @@ data class MatchRunDto(
     val llmScored: Int,
     val error: String?,
     val filtered: Map<String, Int> = emptyMap(),
+    val suggestions: List<Suggestion> = emptyList(),
 )
 
 @Serializable
@@ -115,7 +117,7 @@ private fun FeedRow.toDto() = FeedJobDto(
     closed = job.closed,
 )
 
-private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error, filtered)
+private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error, filtered, suggestions)
 
 private fun Company.toDto() = CompanyDto(id.toString(), name, ats, boardToken, active, lastSyncedAt?.toString(), lastError, openJobs)
 

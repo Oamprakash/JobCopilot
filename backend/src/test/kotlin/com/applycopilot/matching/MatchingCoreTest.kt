@@ -154,4 +154,44 @@ class MatchingCoreTest {
         assertTrue(weak.score < fit.score)
         assertTrue(weak.missingSkills.containsAll(listOf("Flutter", "Dart", "Swift")), "${weak.missingSkills}")
     }
+
+    // ---- Widen-search suggestions ---------------------------------------------------------
+
+    @Test
+    fun suggestsCitiesRolesAndRemoteThatWouldAddRelevantJobs() {
+        val p = prefs.copy(locations = listOf("Chennai"), remoteMode = RemoteMode.HYBRID, skipCompanies = emptyList())
+        val failed = listOf(
+            job("Android Engineer", "Hyderabad, India", "Kotlin and Coroutines"),
+            job("Senior Android Engineer", "Hyderabad", "Kotlin and Java"),
+            job("Android Developer", "Pune, India", "Kotlin, Java"),
+            job("Backend Engineer", "Chennai", "Kotlin, Java and Spring"),
+            job("Android Engineer", "Remote - India", "Kotlin and Jetpack Compose"),
+            job("Sales Manager", "Hyderabad", "Sell things"),
+            job("Backend Engineer", "Berlin, Germany", "Kotlin, Java"),
+        )
+        assertTrue(failed.none { HardFilter.evaluate(it, profile, p).pass })
+        assertEquals(
+            listOf(
+                Suggestion("location", "Hyderabad", 2),
+                Suggestion("location", "Pune", 1),
+                Suggestion("role", "Backend Engineer", 1),
+                Suggestion("remote", "Remote in India", 1),
+            ),
+            Suggestions.compute(failed, profile, p),
+        )
+    }
+
+    @Test
+    fun noSuggestionsForCitiesAlreadyChosenOrIrrelevantJobs() {
+        val p = prefs.copy(locations = listOf("Bangalore"), remoteMode = RemoteMode.ANY, skipCompanies = emptyList())
+        val failed = listOf(
+            job("Account Executive", "Bengaluru, India", "Kotlin and Java"),
+            job("Sales Manager", "Mumbai", "Sell things"),
+        )
+        // The Bengaluru job fails on role, not location; Mumbai is irrelevant to the profile.
+        assertEquals(emptyList<Suggestion>(), Suggestions.compute(failed, profile, p).filter { it.kind == "location" })
+        assertEquals(listOf("Bengaluru"), Locations.citiesIn("Bangalore, KA"))
+        assertEquals("Backend Engineer", Suggestions.roleFamily("Senior Backend Engineer"))
+        assertEquals("Engineering Manager", Suggestions.roleFamily("Engineering Manager - Platform"))
+    }
 }
