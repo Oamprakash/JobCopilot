@@ -54,6 +54,14 @@ fun main() {
 }
 
 fun Application.module(deps: Deps) {
+    // Startup summary of optional features, so a setting that didn't load is easy to spot.
+    val masked = deps.config.adminEmails.map { e -> e.substringBefore('@').take(2) + "…@" + e.substringAfter('@') }
+    environment.log.info(
+        "Admins: {} | Adzuna: {} | Claude: {}",
+        if (masked.isEmpty()) "none (set ADMIN_EMAILS)" else masked.joinToString(", "),
+        if (deps.config.adzuna != null) "on" else "off",
+        if (deps.config.anthropicApiKey != null) "on" else "off",
+    )
     install(ContentNegotiation) { json(apiJson) }
     install(CallLogging) {
         level = Level.INFO
