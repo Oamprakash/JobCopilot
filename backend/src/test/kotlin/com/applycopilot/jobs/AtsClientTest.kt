@@ -23,6 +23,9 @@ class AtsClientTest {
                     "boards-api.greenhouse.io" -> BoardFixtures.greenhouse()
                     "api.lever.co" -> BoardFixtures.lever
                     "api.ashbyhq.com" -> BoardFixtures.ashby
+                    "api.smartrecruiters.com" ->
+                        if (request.url.encodedPath.endsWith("/postings")) BoardFixtures.smartRecruitersList else BoardFixtures.smartRecruitersDetail
+                    "apply.workable.com" -> BoardFixtures.workable
                     else -> error("unexpected host")
                 }
                 if (request.url.encodedPath.contains("missing")) respond("Not found", HttpStatusCode.NotFound)
@@ -70,6 +73,43 @@ class AtsClientTest {
         assertFalse(jobs[1].remote, "Ashby hybrid roles carry isRemote=true; workplaceType wins")
         assertEquals("TypeScript", jobs[1].description)
         assertEquals(BoardFixtures.publishedAt, jobs[0].postedAt)
+    }
+
+    @Test
+    fun parsesSmartRecruitersWithDetailsOnlyForIndia() = runBlocking {
+        val jobs = client.fetch(Ats.SMARTRECRUITERS, "grab")
+        assertEquals(
+            listOf(
+                "https://api.smartrecruiters.com/v1/companies/grab/postings?limit=100&offset=0",
+                "https://api.smartrecruiters.com/v1/companies/grab/postings/744000001",
+            ),
+            requested,
+            "only the India posting gets a detail call",
+        )
+        val android = jobs.first { it.sourceJobId == "grab:744000001" }
+        assertEquals("Bangalore, KA, India", android.location)
+        assertEquals("https://jobs.smartrecruiters.com/grab/744000001-senior-software-engineer-mobile-android", android.applyUrl)
+        assertEquals("Build our Android app in Kotlin.\n• 6+ years of Android", android.description)
+        assertEquals(BoardFixtures.publishedAt, android.postedAt)
+        val other = jobs.first { it.sourceJobId == "grab:744000002" }
+        assertEquals("", other.description)
+        assertEquals("https://jobs.smartrecruiters.com/grab/744000002", other.applyUrl)
+    }
+
+    @Test
+    fun parsesWorkableWidget() = runBlocking {
+        val jobs = client.fetch(Ats.WORKABLE, "apna")
+        assertEquals("https://apply.workable.com/api/v1/widget/accounts/apna?details=true", requested.single())
+        assertEquals(2, jobs.size)
+        val android = jobs[0]
+        assertEquals("apna:5211B21BC2", android.sourceJobId)
+        assertEquals("Bengaluru, Karnataka, India", android.location)
+        assertFalse(android.remote)
+        assertEquals("Kotlin and Jetpack Compose .\n5+ years.", android.description)
+        assertEquals("https://apply.workable.com/j/5211B21BC2", android.applyUrl)
+        assertEquals(BoardFixtures.publishedAt.toString().take(10), android.postedAt.toString().take(10))
+        assertTrue(jobs[1].remote)
+        assertEquals("India; Remote", jobs[1].location)
     }
 
     @Test

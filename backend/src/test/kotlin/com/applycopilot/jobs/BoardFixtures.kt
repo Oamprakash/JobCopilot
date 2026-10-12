@@ -55,4 +55,39 @@ object BoardFixtures {
            "jobUrl": "https://jobs.ashbyhq.com/gamma/ash-3", "descriptionHtml": "<p>TypeScript</p>"}
         ]}
     """.trimIndent()
+
+    /** SmartRecruiters list (no descriptions) and per-posting detail, in their documented shapes. */
+    val smartRecruitersList = """
+        {"offset": 0, "limit": 100, "totalFound": 2, "content": [
+          {"id": "744000001", "name": "Senior Software Engineer, Mobile (Android)", "releasedDate": "$publishedAt",
+           "location": {"city": "Bangalore", "region": "KA", "country": "in", "remote": false}},
+          {"id": "744000002", "name": "Account Manager", "releasedDate": "$publishedAt",
+           "location": {"city": "Singapore", "country": "sg", "remote": false}}
+        ]}
+    """.trimIndent()
+
+    val smartRecruitersDetail = """
+        {"id": "744000001", "name": "Senior Software Engineer, Mobile (Android)",
+         "postingUrl": "https://jobs.smartrecruiters.com/grab/744000001-senior-software-engineer-mobile-android",
+         "location": {"city": "Bangalore", "region": "KA", "country": "in", "remote": false},
+         "jobAd": {"sections": {
+           "companyDescription": {"title": "Company", "text": "<p>About us</p>"},
+           "jobDescription": {"title": "Job", "text": "<p>Build our Android app in Kotlin.</p>"},
+           "qualifications": {"title": "Qualifications", "text": "<ul><li>6+ years of Android</li></ul>"},
+           "additionalInformation": {"title": "More", "text": ""}
+         }}}
+    """.trimIndent()
+
+    val workable = """
+        {"name": "Apna", "description": "", "jobs": [
+          {"title": "Android Developer", "shortcode": "5211B21BC2", "employment_type": "Full-time", "telecommuting": false,
+           "url": "https://apply.workable.com/j/5211B21BC2", "application_url": "https://apply.workable.com/j/5211B21BC2/apply",
+           "published_on": "${publishedAt.toString().take(10)}", "country": "India", "city": "Bengaluru", "state": "Karnataka",
+           "locations": [{"country": "India", "countryCode": "IN", "city": "Bengaluru", "region": "Karnataka", "hidden": false}],
+           "description": "<p>Kotlin and <strong>Jetpack Compose</strong>.<br>5+ years.</p>"},
+          {"title": "Growth Lead", "shortcode": "ABC", "telecommuting": true, "url": "https://apply.workable.com/j/ABC",
+           "published_on": "${publishedAt.toString().take(10)}", "country": "India", "city": "", "locations": [],
+           "description": "<p>Growth</p>"}
+        ]}
+    """.trimIndent()
 }

@@ -25,7 +25,7 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 
 | Area | What it does |
 | --- | --- |
-| Job sources | Public board APIs only: Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co/v0/postings`), Ashby (`api.ashbyhq.com/posting-api`). No LinkedIn, Naukri or Indeed scraping. 43 seed boards with India engineering openings ship in `V2__job_feed.sql` and `V3__more_boards_and_filter_counts.sql`. `tools/probe_boards.py` (run by the *Probe job boards* workflow) checks a candidate list and writes the results to the `probe-results` branch. |
+| Job sources | Public board APIs only: Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co/v0/postings`), Ashby (`api.ashbyhq.com/posting-api`), Workable (`apply.workable.com/api/v1/widget`) and SmartRecruiters (`api.smartrecruiters.com/v1/companies/{id}/postings`). No LinkedIn, Naukri or Indeed scraping. Seed boards with India engineering openings ship in migrations V2–V4. SmartRecruiters boards are seeded **paused**: that API host disallows automated access in robots.txt and its docs describe API-key access, so confirm their terms (or get a Posting API key) before activating them. `tools/probe_boards.py` (run by the *Probe job boards* workflow) checks a candidate list and writes the results to the `probe-results` branch. |
 | Ingestion | Every `INGEST_INTERVAL_HOURS` (default 24): fetch each active board, upsert jobs, close jobs that disappeared. A failed fetch leaves existing jobs open and records the error on the company. |
 | Hard filters | Location (city aliases such as Bangalore/Bengaluru; remote jobs only if open to India or APAC), work mode, role (distinctive words of target roles, with synonyms like android→mobile), experience band from the JD, entry-level titles, companies to skip. |
 | Shortlist | TF-IDF cosine between profile and JD; top 50 go on to scoring. |
@@ -33,7 +33,7 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 | Feed | An empty feed says why, e.g. "290 were different roles, 15 were outside your locations". New / Saved / Skipped tabs, score, 3 reasons, missing skills, full JD, link to the job. Changing the profile or preferences clears unreviewed matches and rebuilds the feed on the next visit. |
 | Admin | `ADMIN_EMAILS` can list boards, add one (synced straight away, so a wrong token shows its error), pause one, or run a sync. |
 
-Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","boardToken":"acme"}`. The token is the part of the board URL after `boards.greenhouse.io/`, `jobs.lever.co/` or `jobs.ashbyhq.com/`.
+Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","boardToken":"acme"}`. The token is the part of the board URL after `boards.greenhouse.io/`, `jobs.lever.co/`, `jobs.ashbyhq.com/` or `apply.workable.com/`; for SmartRecruiters it is the company id in `jobs.smartrecruiters.com/{id}` (case matters, e.g. `BoschGroup`). To turn a paused board on: `PUT /api/admin/companies/{id}/active {"active": true}` (ids from `GET /api/admin/companies`).
 
 ## Run it locally
 

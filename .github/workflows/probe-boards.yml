@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 tools/probe_boards.py tools/board_candidates.txt smartrecruiters,workable
+      - run: python3 tools/probe_boards.py tools/board_candidates.txt
       - name: Publish results to the probe-results branch
         run: |
           mkdir /tmp/out && cp probe-results.json probe-results.md probe-samples.json /tmp/out/
