@@ -80,14 +80,19 @@ jobs:
             jobcopilot
       - name: Smoke test
         run: |
-          for i in $(seq 1 90); do curl -fsS http://localhost:10000/api/health && break; sleep 2; done
-          curl -fsS http://localhost:10000/api/health | grep -q ok
-          curl -fsS http://localhost:10000/login | grep -q "Apply Copilot"
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
+          fail() { echo "::error title=Render image::$1"; exit 1; }
+          for i in $(seq 1 90); do curl -fsS http://localhost:10000/api/health >/dev/null 2>&1 && break; sleep 2; done
+          curl -fsS http://localhost:10000/api/health | grep -q ok || fail "API health through the web app did not answer"
+          curl -fsS http://localhost:10000/login | grep -q "Apply Copilot" || fail "Login page did not render"
+          code=$(curl -s -o /tmp/ml.json -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
             -H 'Content-Type: application/json' -H 'Origin: http://localhost:10000' -d '{"email":"friend@example.com"}')
-          test "$code" = 200
+          test "$code" = 200 || fail "magic-link returned $code: $(head -c 300 /tmp/ml.json)"
           mem=$(docker stats --no-stream --format '{{.MemUsage}}' app)
           echo "::notice title=Render image::Started and answered; memory $mem"
       - name: Container logs
         if: always()
-        run: docker logs app 2>&1 | tail -80
+        run: |
+          docker ps -a --format '{{.Names}} {{.Status}}'
+          # Logs as one annotation so they're readable without opening the job log.
+          logs=$(docker logs app 2>&1 | grep -v "^\s*at " | tail -25 | cut -c1-300 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
+          echo "::warning title=Container logs ($(docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}}' app))::$logs"
