@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, type AutocompleteOptions, type Preferences, type RemoteMode } from "@/lib/api";
 import { fallbackOptions } from "@/lib/autocomplete";
+import { visaCountries } from "@/lib/visaCountries";
 import { ChipInput } from "./ChipInput";
 import { NumberField } from "./NumberField";
 
@@ -30,6 +31,14 @@ export function PreferencesForm({ value, onChange }: { value: Preferences; onCha
     <div className="stack">
       <ChipInput label="Target roles" values={value.roles} onChange={(v) => set("roles", v)} placeholder="e.g. Senior Android Engineer" suggestions={options.roles} />
       <ChipInput label="Locations" values={value.locations} onChange={(v) => set("locations", v)} placeholder="e.g. Chennai" suggestions={options.locations} />
+      <VisaCountries locations={value.locations} onAdd={(country) => set("locations", [...value.locations, country])} />
+      <label className="checkbox">
+        <input type="checkbox" checked={value.needsVisaSponsorship ?? false} onChange={(e) => set("needsVisaSponsorship", e.target.checked)} />
+        <span>
+          I&apos;ll need visa sponsorship for jobs abroad
+          <span className="hint" style={{ display: "block" }}>Hides jobs outside India whose description says there&apos;s no sponsorship.</span>
+        </span>
+      </label>
       <label className="field">
         Work mode
         <select className="select" value={value.remoteMode} onChange={(e) => set("remoteMode", e.target.value as RemoteMode)}>
@@ -52,5 +61,38 @@ export function PreferencesForm({ value, onChange }: { value: Preferences; onCha
         placeholder="Add a company"
       />
     </div>
+  );
+}
+
+/** Countries with an employer-sponsored work route, one tap to add each to Locations. */
+function VisaCountries({ locations, onAdd }: { locations: string[]; onAdd: (country: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const chosen = new Set(locations.map((l) => l.toLowerCase()));
+  return (
+    <details className="visa-guide" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>Countries that sponsor work visas for tech roles</summary>
+      <p className="hint" style={{ margin: "8px 0" }}>
+        Each has an employer-sponsored route. Rules and salary minimums change, so check the official page before you apply.
+      </p>
+      <ul className="visa-list">
+        {visaCountries.map((c) => {
+          const added = chosen.has(c.location.toLowerCase());
+          return (
+            <li key={c.location}>
+              <div style={{ minWidth: 0 }}>
+                <strong>{c.location}</strong> · <a href={c.officialUrl} target="_blank" rel="noopener noreferrer">{c.route}</a>
+                <span className="hint" style={{ display: "block" }}>
+                  {c.note}
+                  {!c.adzuna && " Jobs here come from company boards only."}
+                </span>
+              </div>
+              <button type="button" className="btn btn-secondary" disabled={added} onClick={() => onAdd(c.location)}>
+                {added ? "Added" : "Add"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }

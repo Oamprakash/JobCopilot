@@ -283,6 +283,13 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
             {job.closed && <span className="badge-closed">No longer open</span>}
           </p>
           <SourceAttribution source={job.source ?? ""} />
+          {(job.visa || job.relocation) && (
+            <div className="chips" style={{ marginTop: 6 }}>
+              {job.visa === "offered" && <span className="badge badge-good">Visa sponsorship mentioned</span>}
+              {job.visa === "not_offered" && <span className="badge badge-warn">Says no visa sponsorship</span>}
+              {job.relocation && <span className="badge badge-good">Relocation support</span>}
+            </div>
+          )}
         </div>
         {job.reasons.length > 0 && (
           <ul className="reasons">
@@ -395,6 +402,7 @@ const filterLabels: Record<string, (n: number) => string> = {
   experience: (n) => `${n} asked for a different experience level`,
   seniority: (n) => `${n} ${n === 1 ? "was an entry-level or junior role" : "were entry-level or junior roles"}`,
   skippedCompany: (n) => `${n} ${n === 1 ? "was" : "were"} at companies you skip`,
+  visa: (n) => `${n} abroad ${n === 1 ? "says" : "say"} there's no visa sponsorship`,
   other: (n) => `${n} filtered for other reasons`,
 };
 

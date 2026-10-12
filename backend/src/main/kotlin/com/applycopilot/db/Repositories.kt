@@ -195,7 +195,8 @@ object PreferencesTable {
     fun find(c: Connection, userId: UUID): Preferences? =
         c.prepareStatement(
             """
-            SELECT roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies
+            SELECT roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies,
+                   needs_visa_sponsorship
             FROM preferences WHERE user_id = ?
             """.trimIndent(),
         ).use { st ->
@@ -209,6 +210,7 @@ object PreferencesTable {
                     experienceYears = rs.getBigDecimal("experience_years")?.toDouble(),
                     noticePeriodDays = rs.getObject("notice_period_days")?.let { (it as Number).toInt() },
                     skipCompanies = rs.textArray("skip_companies"),
+                    needsVisaSponsorship = rs.getBoolean("needs_visa_sponsorship"),
                 )
             }
         }
@@ -216,8 +218,9 @@ object PreferencesTable {
     fun upsert(c: Connection, userId: UUID, p: Preferences) {
         c.prepareStatement(
             """
-            INSERT INTO preferences (user_id, roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())
+            INSERT INTO preferences (user_id, roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies,
+                                     needs_visa_sponsorship, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
             ON CONFLICT (user_id) DO UPDATE SET
                 roles = EXCLUDED.roles,
                 locations = EXCLUDED.locations,
@@ -226,6 +229,7 @@ object PreferencesTable {
                 experience_years = EXCLUDED.experience_years,
                 notice_period_days = EXCLUDED.notice_period_days,
                 skip_companies = EXCLUDED.skip_companies,
+                needs_visa_sponsorship = EXCLUDED.needs_visa_sponsorship,
                 updated_at = now()
             """.trimIndent(),
         ).use { st ->
@@ -237,6 +241,7 @@ object PreferencesTable {
             if (p.experienceYears == null) st.setNull(6, Types.NUMERIC) else st.setBigDecimal(6, BigDecimal.valueOf(p.experienceYears))
             if (p.noticePeriodDays == null) st.setNull(7, Types.INTEGER) else st.setInt(7, p.noticePeriodDays)
             st.setArray(8, c.createArrayOf("text", p.skipCompanies.toTypedArray()))
+            st.setBoolean(9, p.needsVisaSponsorship)
             st.executeUpdate()
         }
     }

@@ -64,4 +64,6 @@ data class Preferences(
     val experienceYears: Double? = null,
     val noticePeriodDays: Int? = null,
     val skipCompanies: List<String> = emptyList(),
+    /** For jobs outside India: hide the ones whose description says there's no visa sponsorship. */
+    val needsVisaSponsorship: Boolean = false,
 )

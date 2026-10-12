@@ -4,6 +4,7 @@ import com.applycopilot.jobs.JobPosting
 import com.applycopilot.matching.FitScore
 import com.applycopilot.matching.JobForMatching
 import com.applycopilot.matching.OpenJob
+import com.applycopilot.matching.Sponsorship
 import com.applycopilot.matching.Suggestion
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -110,6 +111,9 @@ data class JobDetail(
     val source: String = "",
     /** True when [description] is only the source's summary of the job. */
     val partial: Boolean = false,
+    /** What the description says about visa sponsorship: "offered", "not_offered", or null when it doesn't say. */
+    val visa: String? = null,
+    val relocation: Boolean = false,
 )
 
 /** The employer shown for a job: an aggregator job's own employer, otherwise the board's company. */
@@ -121,12 +125,13 @@ object Jobs {
         c.prepareStatement(
             """
             INSERT INTO jobs (id, company_id, source, source_job_id, title, location, remote, description, apply_url, posted_at,
-                              employer, description_partial)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              employer, description_partial, visa, relocation)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (source, source_job_id) DO UPDATE SET
                 title = EXCLUDED.title, location = EXCLUDED.location, remote = EXCLUDED.remote,
                 description = EXCLUDED.description, apply_url = EXCLUDED.apply_url,
                 employer = EXCLUDED.employer, description_partial = EXCLUDED.description_partial,
+                visa = EXCLUDED.visa, relocation = EXCLUDED.relocation,
                 posted_at = coalesce(EXCLUDED.posted_at, jobs.posted_at),
                 last_seen_at = now(), closed_at = NULL
             RETURNING (xmax = 0) AS inserted
@@ -144,6 +149,10 @@ object Jobs {
             if (p.postedAt == null) st.setNull(10, Types.TIMESTAMP_WITH_TIMEZONE) else st.setTimestamp(10, Timestamp.from(p.postedAt))
             if (p.employer == null) st.setNull(11, Types.VARCHAR) else st.setString(11, p.employer.take(200))
             st.setBoolean(12, p.partial)
+            val text = p.title + "\n" + p.description
+            val visa = Sponsorship.visa(text)
+            if (visa == null) st.setNull(13, Types.VARCHAR) else st.setString(13, visa)
+            st.setBoolean(14, Sponsorship.relocation(text))
             st.executeQuery().use { rs -> rs.next(); rs.getBoolean("inserted") }
         }
 
@@ -223,7 +232,7 @@ object Jobs {
         c.prepareStatement(
             """
             SELECT j.id, $EMPLOYER, j.title, j.location, j.remote, j.description, j.apply_url, j.posted_at, j.closed_at,
-                   j.source, j.description_partial
+                   j.source, j.description_partial, j.visa, j.relocation
             FROM jobs j JOIN companies co ON co.id = j.company_id WHERE j.id = ?
             """.trimIndent(),
         ).use { st ->
@@ -241,6 +250,8 @@ object Jobs {
                     closed = rs.getTimestamp(9) != null,
                     source = rs.getString(10),
                     partial = rs.getBoolean(11),
+                    visa = rs.getString(12),
+                    relocation = rs.getBoolean(13),
                 )
             }
         }
@@ -312,7 +323,7 @@ object Matches {
         c.prepareStatement(
             """
             SELECT j.id, $EMPLOYER, j.title, j.location, j.remote, j.apply_url, j.posted_at, j.closed_at,
-                   m.score, m.reasons, m.missing_skills, m.scorer, m.status, j.source, j.description_partial
+                   m.score, m.reasons, m.missing_skills, m.scorer, m.status, j.source, j.description_partial, j.visa, j.relocation
             FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
             WHERE m.user_id = ? AND m.status = ? AND m.score >= ?
               AND (m.status <> 'new' OR j.closed_at IS NULL)
@@ -340,6 +351,8 @@ object Matches {
                                 closed = rs.getTimestamp(8) != null,
                                 source = rs.getString(14),
                                 partial = rs.getBoolean(15),
+                                visa = rs.getString(16),
+                                relocation = rs.getBoolean(17),
                             ),
                             score = rs.getInt(9),
                             reasons = rs.textArray(10),

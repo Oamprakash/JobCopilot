@@ -63,11 +63,31 @@ object Locations {
         Place("Cyberjaya", emptyList(), "my"),
         Place("Petaling Jaya", emptyList(), "my"),
         Place("Johor Bahru", emptyList(), "my"),
+        // Countries with employer-sponsored routes for skilled tech workers (see the web app's visa guide).
+        Place("Berlin", emptyList(), "de"), Place("Munich", listOf("münchen", "muenchen"), "de"), Place("Hamburg", emptyList(), "de"),
+        Place("Frankfurt", listOf("frankfurt am main"), "de"), Place("Cologne", listOf("köln", "koeln"), "de"), Place("Stuttgart", emptyList(), "de"),
+        Place("Amsterdam", emptyList(), "nl"), Place("Rotterdam", emptyList(), "nl"), Place("Eindhoven", emptyList(), "nl"),
+        Place("The Hague", listOf("den haag"), "nl"), Place("Utrecht", emptyList(), "nl"),
+        Place("London", emptyList(), "gb"), Place("Manchester", emptyList(), "gb"), Place("Edinburgh", emptyList(), "gb"), Place("Bristol", emptyList(), "gb"),
+        Place("Dublin", emptyList(), "ie"), Place("Cork", emptyList(), "ie"),
+        Place("Toronto", emptyList(), "ca"), Place("Vancouver", emptyList(), "ca"), Place("Montreal", listOf("montréal"), "ca"), Place("Ottawa", emptyList(), "ca"),
+        Place("Sydney", emptyList(), "au"), Place("Melbourne", emptyList(), "au"), Place("Brisbane", emptyList(), "au"),
+        Place("Auckland", emptyList(), "nz"), Place("Wellington", emptyList(), "nz"),
+        Place("Tokyo", emptyList(), "jp"),
         Place("India", emptyList(), "in", isCountry = true),
         Place("Malaysia", emptyList(), "my", isCountry = true),
         Place("UAE", listOf("united arab emirates"), "ae", isCountry = true),
+        Place("Germany", listOf("deutschland"), "de", isCountry = true),
+        Place("Netherlands", listOf("the netherlands", "holland"), "nl", isCountry = true),
+        Place("United Kingdom", listOf("uk", "england", "scotland"), "gb", isCountry = true),
+        Place("Ireland", emptyList(), "ie", isCountry = true),
+        Place("Canada", emptyList(), "ca", isCountry = true),
+        Place("Australia", emptyList(), "au", isCountry = true),
+        Place("New Zealand", emptyList(), "nz", isCountry = true),
+        Place("Japan", emptyList(), "jp", isCountry = true),
     )
-    private val countryNames = mapOf("in" to listOf("india"), "sg" to listOf("singapore"), "ae" to listOf("uae", "united arab emirates"), "my" to listOf("malaysia"))
+    private val countryNames: Map<String, List<String>> =
+        places.filter { it.isCountry }.associate { it.country to it.names } + ("sg" to listOf("singapore"))
 
     private val indiaWords: Set<String> = places.filter { it.country == "in" }.flatMap { it.names }.toSet() + setOf("india")
     private val remoteRegions = setOf("apac", "asia", "anywhere", "worldwide", "global")
@@ -96,6 +116,14 @@ object Locations {
     fun citiesIn(location: String): List<String> {
         val l = location.lowercase()
         return places.filter { !it.isCountry && it.names.any { n -> has(l, n) } }.map { it.display }
+    }
+
+    /** True when a job location names a place we know outside India (and none in India). */
+    fun isAbroad(location: String): Boolean {
+        val l = location.lowercase()
+        if (mentionsIndia(l)) return false
+        return places.any { it.country != "in" && it.names.any { n -> has(l, n) } } ||
+            countryNames.any { (code, names) -> code != "in" && names.any { has(l, it) } }
     }
 
     fun mentionsIndia(location: String): Boolean = location.lowercase().let { l -> indiaWords.any { has(l, it) } }
@@ -202,6 +230,12 @@ object HardFilter {
         if (!locationOk) return FilterResult(false, "location")
 
         if (!titleMatchesRole(job.title, prefs, profile)) return FilterResult(false, "role")
+
+        if (prefs.needsVisaSponsorship && Locations.isAbroad(job.location) &&
+            Sponsorship.visa(job.title + "\n" + job.description) == Sponsorship.NOT_OFFERED
+        ) {
+            return FilterResult(false, "no visa sponsorship")
+        }
 
         val years = prefs.experienceYears ?: profile.totalExperienceYears
         val titleTokens = tokens(job.title)

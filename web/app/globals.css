@@ -163,6 +163,16 @@ h2 { font-size: 16px; margin: 0; }
 }
 .attribution strong { color: #1a9b3f; font-size: 14px; letter-spacing: -0.01em; }
 
+.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge-good { background: var(--good-soft); color: var(--good); }
+.badge-warn { background: var(--warn-soft); color: var(--warn); }
+
+.visa-guide { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; font-weight: 400; }
+.visa-guide summary { cursor: pointer; font-weight: 600; font-size: 14px; min-height: 28px; }
+.visa-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.visa-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.visa-list .btn { min-height: 36px; padding: 6px 14px; flex-shrink: 0; }
+
 .suggestion { justify-content: space-between; text-align: left; width: 100%; }
 .suggestion-count { color: var(--good); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 

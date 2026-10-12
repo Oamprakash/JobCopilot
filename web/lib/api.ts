@@ -41,6 +41,8 @@ export type Preferences = {
   experienceYears?: number | null;
   noticePeriodDays?: number | null;
   skipCompanies: string[];
+  /** For jobs abroad: hide the ones whose description rules out visa sponsorship. */
+  needsVisaSponsorship?: boolean;
 };
 
 export type Me = { id: string; email: string; plan: "free" | "pro"; hasProfile: boolean };
@@ -68,6 +70,9 @@ export type FeedJob = {
   source?: string;
   /** Only a summary of the description is available. */
   descriptionPartial?: boolean;
+  /** What the description says about visa sponsorship (absent when it doesn't say). */
+  visa?: "offered" | "not_offered" | null;
+  relocation?: boolean;
 };
 
 export type MatchRun = {
@@ -254,4 +259,5 @@ export const emptyPreferences: Preferences = {
   experienceYears: null,
   noticePeriodDays: null,
   skipCompanies: [],
+  needsVisaSponsorship: false,
 };

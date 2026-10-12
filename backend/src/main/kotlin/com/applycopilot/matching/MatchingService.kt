@@ -104,6 +104,7 @@ class MatchingService(
         reason == "location" -> "location"
         reason == "role" -> "role"
         reason == "company on skip list" -> "skippedCompany"
+        reason == "no visa sponsorship" -> "visa"
         reason == "entry-level role" || reason == "junior role" -> "seniority"
         reason.startsWith("needs") || reason.startsWith("asks") -> "experience"
         else -> "other"

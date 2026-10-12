@@ -53,6 +53,9 @@ data class FeedJobDto(
     val source: String = "",
     /** True when only a summary of the description is available. */
     val descriptionPartial: Boolean = false,
+    /** What the description says about visa sponsorship: "offered", "not_offered", or null. */
+    val visa: String? = null,
+    val relocation: Boolean = false,
 )
 
 @Serializable
@@ -99,6 +102,8 @@ data class JobDetailDto(
     val closed: Boolean,
     val source: String = "",
     val descriptionPartial: Boolean = false,
+    val visa: String? = null,
+    val relocation: Boolean = false,
 )
 
 @Serializable
@@ -138,6 +143,8 @@ private fun FeedRow.toDto() = FeedJobDto(
     closed = job.closed,
     source = job.source,
     descriptionPartial = job.partial,
+    visa = job.visa,
+    relocation = job.relocation,
 )
 
 private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error, filtered, suggestions)
@@ -215,7 +222,7 @@ fun Route.feedRoutes(deps: Deps) {
         call.respond(
             JobDetailDto(
                 job.id.toString(), job.title, job.company, job.location, job.remote, job.applyUrl, job.postedAt?.toString(),
-                job.description, job.closed, job.source, job.partial,
+                job.description, job.closed, job.source, job.partial, job.visa, job.relocation,
             ),
         )
     }

@@ -9,8 +9,14 @@ const cities: [string, ...string[]][] = [
   ["Chandigarh"], ["Lucknow"], ["Nagpur"], ["Bhubaneswar"], ["Madurai"],
   ["Singapore"], ["Dubai"], ["Abu Dhabi"], ["Sharjah"], ["Kuala Lumpur"], ["Penang", "George Town", "Bayan Lepas"],
   ["Cyberjaya"], ["Petaling Jaya"], ["Johor Bahru"],
+  ["Berlin"], ["Munich", "München"], ["Hamburg"], ["Frankfurt"], ["Cologne", "Köln"], ["Stuttgart"],
+  ["Amsterdam"], ["Rotterdam"], ["Eindhoven"], ["The Hague", "Den Haag"], ["Utrecht"],
+  ["London"], ["Manchester"], ["Edinburgh"], ["Bristol"], ["Dublin"], ["Cork"],
+  ["Toronto"], ["Vancouver"], ["Montreal"], ["Ottawa"], ["Sydney"], ["Melbourne"], ["Brisbane"],
+  ["Auckland"], ["Wellington"], ["Tokyo"],
   // Whole countries: match a job anywhere in them.
-  ["India"], ["Malaysia"], ["UAE", "United Arab Emirates"],
+  ["India"], ["Malaysia"], ["UAE", "United Arab Emirates"], ["Germany", "Deutschland"], ["Netherlands", "Holland"],
+  ["United Kingdom", "UK", "England"], ["Ireland"], ["Canada"], ["Australia"], ["New Zealand"], ["Japan"],
 ];
 
 const roles = [
