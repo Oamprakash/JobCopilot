@@ -87,7 +87,15 @@ export type MatchRun = {
 export type Suggestion = { kind: "location" | "role" | "remote"; value: string; count: number };
 
 /** hiddenWeak: new matches scoring below minScore that were left out because weak matches weren't asked for. */
-export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean; minScore?: number; hiddenWeak?: number };
+export type Feed = {
+  jobs: FeedJob[];
+  lastRun: MatchRun | null;
+  needsRefresh: boolean;
+  minScore?: number;
+  hiddenWeak?: number;
+  /** Jobs on each tab; New follows the weak-match setting. */
+  counts?: Partial<Record<MatchStatus, number>>;
+};
 
 export type JobDetail = {
   jobId: string;

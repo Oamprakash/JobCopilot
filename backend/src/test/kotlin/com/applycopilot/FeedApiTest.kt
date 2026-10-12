@@ -288,10 +288,14 @@ class FeedApiTest {
         assertEquals(0, weak.hiddenWeak)
         assertEquals(3, client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.size)
 
+        assertEquals(mapOf("new" to 0, "saved" to 0, "skipped" to 0), hidden.counts)
+        assertEquals(mapOf("new" to 3, "saved" to 0, "skipped" to 0), weak.counts)
+
         // Saving a weak match moves it to Saved, which shows every score, and it no longer counts as hidden.
         client.put("/feed/${weak.jobs.first().jobId}/status") { contentType(ContentType.Application.Json); setBody(StatusRequest("saved")) }
         assertEquals(1, client.feed("saved").jobs.size)
         assertEquals(2, client.feed().hiddenWeak)
+        assertEquals(mapOf("new" to 2, "saved" to 1, "skipped" to 0), client.get("/feed?status=saved&weak=true").body<FeedResponse>().counts)
     }
 
     @Test

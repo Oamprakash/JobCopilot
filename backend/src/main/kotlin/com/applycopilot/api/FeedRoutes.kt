@@ -79,6 +79,8 @@ data class FeedResponse(
     val needsRefresh: Boolean,
     val minScore: Int = MIN_FEED_SCORE,
     val hiddenWeak: Int = 0,
+    /** Jobs on each tab ("new", "saved", "skipped"); New follows the same weak-match setting as [jobs]. */
+    val counts: Map<String, Int> = emptyMap(),
 )
 
 @Serializable
@@ -159,6 +161,7 @@ private suspend fun feedResponse(deps: Deps, userId: UUID, status: String, weak:
         lastRun = lastRun?.toDto(),
         needsRefresh = changedAt != null && (lastRun == null || lastRun.startedAt.isBefore(changedAt)),
         hiddenWeak = if (hidesWeak) Matches.countNewBelow(c, userId, MIN_FEED_SCORE) else 0,
+        counts = Matches.tabCounts(c, userId, if (weak) 0 else MIN_FEED_SCORE),
     )
 }
 

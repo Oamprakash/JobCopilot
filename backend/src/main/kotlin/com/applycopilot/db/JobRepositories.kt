@@ -274,6 +274,27 @@ object Matches {
         }
     }
 
+    /**
+     * How many jobs each tab shows: New counts open jobs scoring at least [newMinScore] (as the New tab lists them);
+     * Saved and Skipped count everything. Capped at the feed's page size so the badge matches the list.
+     */
+    fun tabCounts(c: Connection, userId: UUID, newMinScore: Int, cap: Int = 100): Map<String, Int> =
+        c.prepareStatement(
+            """
+            SELECT m.status, count(*) FROM matches m JOIN jobs j ON j.id = m.job_id
+            WHERE m.user_id = ? AND (m.status <> 'new' OR (j.closed_at IS NULL AND m.score >= ?))
+            GROUP BY m.status
+            """.trimIndent(),
+        ).use { st ->
+            st.setObject(1, userId)
+            st.setInt(2, newMinScore)
+            st.executeQuery().use { rs ->
+                val counts = mutableMapOf("new" to 0, "saved" to 0, "skipped" to 0)
+                while (rs.next()) counts[rs.getString(1)] = minOf(rs.getInt(2), cap)
+                counts
+            }
+        }
+
     /** New matches on open jobs that score below [minScore], i.e. the ones the New tab hides by default. */
     fun countNewBelow(c: Connection, userId: UUID, minScore: Int): Int =
         c.prepareStatement(

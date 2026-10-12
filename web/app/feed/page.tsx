@@ -122,13 +122,23 @@ export default function FeedPage() {
     }
   }
 
+  // Moves the card and both tab counts at once; undone if the server refuses.
+  const shift = (f: Feed, from: MatchStatus, to: MatchStatus, by: number): Feed => {
+    if (!f.counts) return f;
+    const counts = { ...f.counts };
+    counts[from] = Math.max(0, (counts[from] ?? 0) - by);
+    counts[to] = (counts[to] ?? 0) + by;
+    return { ...f, counts };
+  };
+
   async function move(job: FeedJob, to: MatchStatus) {
-    setFeed((f) => (f ? { ...f, jobs: f.jobs.filter((j) => j.jobId !== job.jobId) } : f));
+    const from = job.status;
+    setFeed((f) => (f ? shift({ ...f, jobs: f.jobs.filter((j) => j.jobId !== job.jobId) }, from, to, 1) : f));
     try {
       await api.setMatchStatus(job.jobId, to);
     } catch (e) {
       setError(e);
-      setFeed((f) => (f ? { ...f, jobs: [...f.jobs, job].sort((a, b) => b.score - a.score) } : f));
+      setFeed((f) => (f ? shift({ ...f, jobs: [...f.jobs, job].sort((a, b) => b.score - a.score) }, from, to, -1) : f));
     }
   }
 
@@ -187,6 +197,7 @@ export default function FeedPage() {
                   onClick={() => setStatus(t.status)}
                 >
                   {t.label}
+                  {feed?.counts?.[t.status] != null && <span className="tab-count">{feed.counts[t.status]}</span>}
                 </button>
               ))}
             </nav>
