@@ -2,11 +2,12 @@
 
 AI job-application copilot: finds well-matched jobs, tailors each application, and autofills forms, while the user always clicks Submit.
 
-Built so far: **Phase 1 (Foundation)**: sign-in, resume parsing, the master profile and preferences. **Phase 2 (Job feed)**: board ingestion, matching and the daily feed. **Phase 3 (Tailoring)**: a tailored resume, cover letter and screening answers per job, with a claim guardrail and a review screen.
+Built so far: **Phase 1 (Foundation)**: sign-in, resume parsing, the master profile and preferences. **Phase 2 (Job feed)**: board ingestion, matching and the daily feed. **Phase 3 (Tailoring)**: a tailored resume, cover letter and screening answers per job, with a claim guardrail and a review screen. **Phase 4 (Extension and tracker)**: a Chrome extension that fills application forms and saves jobs from any page, and an application tracker with follow-up reminders.
 
 ```
 backend/   Kotlin + Ktor API, Postgres (Flyway), resume parsing (PDFBox, POI, Claude API)
-web/       Next.js 14 app: sign-in, onboarding, profile
+web/       Next.js 14 app: sign-in, onboarding, profile, feed, review screen, tracker, admin
+extension/ Chrome extension (Manifest V3): autofill, Save job, mark applied
 ```
 
 ## What works in Phase 1
@@ -49,6 +50,25 @@ Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","bo
 | Full description | When a job's source gave only a summary (Adzuna), the review screen offers **Paste the full job description**. The draft, guardrail and keyword coverage are rebuilt from the pasted text (200–30,000 characters), stored with that application only; regenerating keeps it, and **Use the summary instead** goes back. Re-tailoring doesn't use another free-plan application. |
 | Approve + PDF | Approving locks the version and unlocks an ATS-friendly resume PDF and a link to the employer's application page. Editing after approval sends it back to draft. |
 | Free plan | `FREE_TAILOR_LIMIT` (default 5) new tailored applications per calendar month; regenerating one doesn't count again. Pro is unlimited (`users.plan = 'pro'`; billing comes later). |
+
+## What works in Phase 4
+
+| Area | What it does |
+| --- | --- |
+| Chrome extension | `extension/` (Manifest V3). **Autofill this application** fills empty fields on Greenhouse, Lever, Ashby and Workday forms (also Greenhouse forms embedded on company sites): name, email, phone, location, LinkedIn / GitHub / website, current company and title, the cover letter, the tailored answers to matching questions, and the tailored resume PDF in the resume upload. Fields you already typed in are left alone, sensitive questions (pay, visa, notice, demographics) are never filled, filled fields are outlined, and it never clicks Submit. The application is matched to the page by URL; otherwise you pick one of your recent applications, or fill just your details. |
+| Save job | **Save this job** on any job page reads the posting (schema.org `JobPosting`, then page tags) and adds it to the tracker as Saved. A page for a job the app already knows reuses that job; others are kept as saved jobs that never enter feeds. |
+| Tracker | `/tracker`: every saved or applied job with its stage (Saved, Applied, Interviewing, Offer, Rejected, Withdrawn), applied date, follow-up date (+3 days / +1 week / done) and notes, filterable by stage and "Follow up". Add jobs from anywhere by hand. **I submitted it** (review screen or extension) marks a job applied and sets a follow-up a week out. |
+| Follow-up reminders | Hourly, each user gets one email listing the tracked jobs whose follow-up date has passed (once per date), linking to the tracker. Without `RESEND_API_KEY` the email is logged. |
+| Extension sign-in | Profile → **Browser extension** gives a one-time 8-character code (10 minutes). The extension exchanges it for its own token (only a hash is stored) and asks permission for just your app's address. **Disconnect everywhere** revokes every extension token. |
+
+### Install the extension
+
+1. Get the code: download the repository (or `git pull`) so you have the `extension` folder.
+2. In Chrome, open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the `extension` folder.
+3. Pin Apply Copilot from the puzzle-piece menu.
+4. In the app, open Profile → **Browser extension** → **Connect the extension**. In the extension popup, enter the app's address (e.g. `https://jobcopilot.onrender.com` or `http://localhost:3000`) and the code.
+
+On an application form, click the extension and **Autofill this application**, review every field, then click the site's Submit yourself. After a `git pull`, click the reload icon on the extension's card in `chrome://extensions`.
 
 ## Run it locally
 
@@ -129,6 +149,12 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | GET | `/admin/overview?days=7\|30\|90` | dashboard totals, daily activity, funnel, top searches (admins) |
 | GET | `/admin/users?q=&offset=&limit=` | users with their search and totals (admins) |
 | GET | `/admin/users/{id}` | one user's preferences, applications and activity timeline (admins; audited) |
+| GET | `/tracker` | `{items, counts, dueCount}` |
+| POST | `/tracker` | `{jobId, stage}`: track a known job (`applied` sets a follow-up in 7 days) |
+| POST | `/tracker/manual` | `{title, company, url, location?, stage?}` |
+| PUT/DELETE | `/tracker/{jobId}` | `{stage?, followUpAt?, clearFollowUp?, notes?}` / remove |
+| GET/POST/DELETE | `/extension`, `/extension/pair-code` | extension status, a pairing code, disconnect all |
+| | `/ext/*` | the extension's API (bearer token): `pair`, `me`, `autofill?url=&jobId=`, `applications/{jobId}/resume.pdf`, `save`, `applied` |
 | POST | `/events` | `{type: "job_opened"\|"apply_clicked", jobId}`: link clicks the browser reports |
 | PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
 | POST | `/admin/ingest` | sync every active board now (admins) |
@@ -147,6 +173,3 @@ Validation errors return `400 {error, problems: [...]}`.
 - Uploads go to `STORAGE_DIR` on local disk. `FileStorage` is the seam for moving to Cloudflare R2.
 - `backend/Dockerfile` builds a fat jar image.
 
-## Next: Phase 4 (Extension and tracker)
-
-A Chrome extension that autofills Greenhouse, Lever, Ashby and Workday forms from the approved application (the user clicks Submit), "Save job" from any job page, and the application tracker with follow-up reminders.

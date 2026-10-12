@@ -33,6 +33,9 @@ export function AppHeader({ email, isAdmin }: { email?: string; isAdmin?: boolea
           <Link href="/feed" className="nav-link" aria-current={pathname === "/feed" ? "page" : undefined}>
             Today&apos;s matches
           </Link>
+          <Link href="/tracker" className="nav-link" aria-current={pathname === "/tracker" ? "page" : undefined}>
+            Tracker
+          </Link>
           <Link href="/profile" className="nav-link" aria-current={pathname === "/profile" ? "page" : undefined}>
             Profile
           </Link>

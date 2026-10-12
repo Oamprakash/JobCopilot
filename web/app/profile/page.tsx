@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ExtensionConnect } from "@/components/ExtensionConnect";
 import { AppHeader } from "@/components/AppHeader";
 import { PreferencesForm } from "@/components/PreferencesForm";
 import { Problems } from "@/components/Problems";
@@ -133,6 +134,8 @@ export default function ProfilePage() {
                 {prefStatus.busy ? "Saving…" : "Save preferences"}
               </button>
             </section>
+
+            <ExtensionConnect />
 
             <section className="card stack">
               <h2>Resume</h2>

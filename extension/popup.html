@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Apply Copilot</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <img src="icons/48.png" alt="" width="24" height="24" />
+    <strong>Apply Copilot</strong>
+    <span id="who" class="muted"></span>
+  </header>
+
+  <section id="connect" hidden>
+    <p class="muted">Connect to your Apply Copilot account. In the app, open <b>Profile → Browser extension</b> and get a code.</p>
+    <label>App address
+      <input id="baseUrl" type="url" placeholder="https://jobcopilot.onrender.com" autocomplete="off" />
+    </label>
+    <label>Connection code
+      <input id="code" type="text" placeholder="ABCD2345" autocomplete="off" maxlength="12" />
+    </label>
+    <button id="pair" class="primary">Connect</button>
+  </section>
+
+  <section id="main" hidden>
+    <div id="pageInfo" class="muted small"></div>
+    <div id="pick" hidden>
+      <label>Fill with
+        <select id="pickApp"></select>
+      </label>
+    </div>
+    <button id="fill" class="primary">Autofill this application</button>
+    <p class="hint">Fills empty fields with your details, your tailored answers and resume. You review everything and click Submit yourself.</p>
+    <div class="row">
+      <button id="save">Save this job</button>
+      <button id="applied" hidden>I submitted it</button>
+    </div>
+    <div class="row small">
+      <a id="openTracker" href="#">Open tracker</a>
+      <a id="disconnect" href="#" class="muted">Disconnect</a>
+    </div>
+  </section>
+
+  <p id="message" role="status" hidden></p>
+  <script src="popup.js"></script>
+</body>
+</html>

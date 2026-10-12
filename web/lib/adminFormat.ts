@@ -15,6 +15,11 @@ export const eventLabels: Record<string, string> = {
   application_approved: "Applications approved",
   resume_downloaded: "Resume PDFs downloaded",
   apply_clicked: "Clicks to apply",
+  extension_connected: "Extensions connected",
+  extension_autofill: "Extension autofills",
+  job_saved_from_page: "Jobs saved from a page",
+  marked_applied: "Marked as applied",
+  tracker_stage: "Tracker stage changes",
 };
 
 export const funnelLabels: [string, string][] = [
@@ -65,6 +70,16 @@ export function describe(e: AdminEvent): string {
       return `Downloaded the resume PDF for ${job}`;
     case "apply_clicked":
       return `Went to the application page for ${job}`;
+    case "extension_connected":
+      return "Connected the browser extension";
+    case "extension_autofill":
+      return d.matched ? `Autofilled the form for ${job} with the extension` : `Used the extension on ${d.host || "a page"} (no tailored application matched)`;
+    case "job_saved_from_page":
+      return `Saved ${job} from ${d.host || "a page"} with the extension`;
+    case "marked_applied":
+      return `Marked ${job} as applied${d.via === "extension" ? " (extension)" : ""}`;
+    case "tracker_stage":
+      return d.from ? `Moved ${job} from ${d.from} to ${d.stage}` : `Added ${job} to the tracker as ${d.stage}`;
     default:
       return e.type;
   }

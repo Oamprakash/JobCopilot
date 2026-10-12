@@ -47,6 +47,27 @@ export type Preferences = {
 
 export type Me = { id: string; email: string; plan: "free" | "pro"; hasProfile: boolean; isAdmin?: boolean };
 
+export type TrackerStage = "saved" | "applied" | "interview" | "offer" | "rejected" | "withdrawn";
+export type TrackerItem = {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  applyUrl: string;
+  source: string;
+  closed: boolean;
+  stage: TrackerStage;
+  appliedAt: string | null;
+  followUpAt: string | null;
+  followUpDue: boolean;
+  notes: string;
+  updatedAt: string;
+  createdAt: string;
+  applicationStatus: string | null;
+};
+export type TrackerList = { items: TrackerItem[]; counts: Record<TrackerStage, number>; dueCount: number };
+export type TrackerPatch = { stage?: TrackerStage; followUpAt?: string; clearFollowUp?: boolean; notes?: string };
+
 export type Counted = { value: string; count: number };
 export type AdminOverview = {
   windowDays: number;
@@ -293,6 +314,19 @@ export const api = {
       body: json({ type, jobId }),
     }).catch(() => undefined);
   },
+
+  tracker: () => request<TrackerList>("/tracker"),
+  trackJob: (jobId: string, stage: TrackerStage = "saved") =>
+    request<TrackerItem>("/tracker", { method: "POST", body: json({ jobId, stage }) }),
+  trackManual: (job: { title: string; company: string; url: string; location?: string; stage?: TrackerStage }) =>
+    request<TrackerItem>("/tracker/manual", { method: "POST", body: json(job) }),
+  updateTracker: (jobId: string, patch: TrackerPatch) =>
+    request<TrackerItem>(`/tracker/${jobId}`, { method: "PUT", body: json(patch) }),
+  untrack: (jobId: string) => request<{ ok: boolean }>(`/tracker/${jobId}`, { method: "DELETE" }),
+
+  extensionStatus: () => request<{ connected: number }>("/extension"),
+  extensionPairCode: () => request<{ code: string; expiresAt: string }>("/extension/pair-code", { method: "POST" }),
+  extensionDisconnect: () => request<{ ok: boolean }>("/extension", { method: "DELETE" }),
 
   adminOverview: (days: number) => request<AdminOverview>(`/admin/overview?days=${days}`),
   adminUsers: (q: string, offset = 0) =>

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Apply Copilot",
+  "version": "0.4.0",
+  "description": "Fills job applications from your approved Apply Copilot application and saves jobs to your tracker. You always click Submit.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Apply Copilot",
+    "default_icon": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+  },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.myworkdayjobs.com/*"
+  ],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"]
+}

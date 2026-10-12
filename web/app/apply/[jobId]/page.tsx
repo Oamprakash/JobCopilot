@@ -31,6 +31,24 @@ export default function ApplyPage() {
   const [error, setError] = useState<unknown>(null);
   const [limitHit, setLimitHit] = useState<string | null>(null);
   const started = useRef(false);
+  const [tracked, setTracked] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!me) return;
+    api
+      .tracker()
+      .then((t) => setTracked(t.items.find((i) => i.jobId === jobId)?.stage ?? null))
+      .catch(() => undefined);
+  }, [me, jobId]);
+
+  async function markApplied() {
+    setError(null);
+    try {
+      setTracked((await api.trackJob(jobId, "applied")).stage);
+    } catch (e) {
+      setError(e);
+    }
+  }
 
   function show(v: ApplicationView) {
     setView(v);
@@ -254,8 +272,18 @@ export default function ApplyPage() {
                   Open application page
                 </a>
                 <p className="muted small" style={{ margin: 0 }}>
-                  Copy the cover letter and answers from the tabs here. You click Submit on their site.
+                  Use the Chrome extension to fill their form, or copy the cover letter and answers from the tabs here. You click Submit on
+                  their site.
                 </p>
+                {tracked && tracked !== "saved" ? (
+                  <p className="notice notice-good small" style={{ margin: 0 }}>
+                    In your <Link href="/tracker">tracker</Link> as {tracked}.
+                  </p>
+                ) : (
+                  <button type="button" className="btn btn-secondary btn-block" onClick={markApplied} disabled={!!busy}>
+                    I submitted it: mark as applied
+                  </button>
+                )}
               </>
             )}
             {view.usage.limit != null && (

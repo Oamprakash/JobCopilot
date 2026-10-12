@@ -211,3 +211,15 @@ details.notice summary::marker { color: var(--warn); }
 .timeline li:last-child { border-bottom: 0; }
 .timeline-time { flex: 0 0 84px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
+/* ---- Tracker ---------------------------------------------------------------------------------- */
+.tracker-card { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; }
+.tracker-main { flex: 1 1 360px; min-width: 0; }
+.tracker-due { border-color: #f0c36b; box-shadow: inset 4px 0 0 #e0a43a; }
+.follow-due { color: var(--warn); font-weight: 700; }
+.tracker-notes { min-height: 56px; font-size: 14px; }
+.due-banner { border: 0; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.pair-code {
+  font: 700 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.18em; padding: 10px 14px;
+  border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary); text-align: center; user-select: all;
+}
+

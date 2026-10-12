@@ -53,6 +53,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node -e "const m=require('./manifest.json'); if (m.manifest_version!==3) process.exit(1)"
+      - run: for f in background.js popup.js lib/match.js content/fill.js content/extract.js; do node --check "$f"; done
+      - run: node --test test/*.test.js
+
   # The Render image: build it, start it within the free plan's 512 MB, and check both halves answer.
   deploy-image:
     runs-on: ubuntu-latest
