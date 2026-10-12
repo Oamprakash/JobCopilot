@@ -150,6 +150,8 @@ export type ApplicationView = {
   keywordsMissing: string[];
   score: number | null;
   usage: Usage;
+  /** The full job description the user pasted, when the source gave only a summary. */
+  pastedDescription?: string | null;
   updatedAt: string;
   approvedAt: string | null;
 };
@@ -217,8 +219,12 @@ export const api = {
   job: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),
 
   getApplication: (jobId: string) => request<ApplicationView>(`/applications/${jobId}`),
-  tailor: (jobId: string, questions?: string[]) =>
-    request<ApplicationView>(`/applications/${jobId}/tailor`, { method: "POST", body: json({ questions: questions ?? null }) }),
+  /** jobDescription: undefined keeps the current one, "" goes back to the job's own, text replaces it. */
+  tailor: (jobId: string, questions?: string[], jobDescription?: string) =>
+    request<ApplicationView>(`/applications/${jobId}/tailor`, {
+      method: "POST",
+      body: json({ questions: questions ?? null, jobDescription: jobDescription ?? null }),
+    }),
   saveApplication: (jobId: string, application: TailoredApplication) =>
     request<ApplicationView>(`/applications/${jobId}`, { method: "PUT", body: json({ application }) }),
   approveApplication: (jobId: string) => request<ApplicationView>(`/applications/${jobId}/approve`, { method: "POST" }),

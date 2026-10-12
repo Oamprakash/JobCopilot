@@ -205,6 +205,31 @@ class TailorApiTest {
     }
 
     @Test
+    fun pastedJobDescriptionDrivesTailoring() = withApp {
+        val client = newClient()
+        val jobId = client.onboardAndFeed().getValue("Senior Android Engineer")
+        val first = client.tailor(jobId).body<ApplicationDto>()
+        assertEquals(null, first.pastedDescription)
+        assertFalse("Rust" in first.keywordsMissing)
+
+        val full = "Senior Android Engineer at Acme. " + "You will build our Android app in Kotlin and write services in Rust. ".repeat(5)
+        fun body(description: String?) = TailorRequest(jobDescription = description)
+        val pasted = client.post("/applications/$jobId/tailor") { contentType(ContentType.Application.Json); setBody(body(full)) }.body<ApplicationDto>()
+        assertEquals(full.trim(), pasted.pastedDescription)
+        assertTrue("Rust" in pasted.keywordsMissing, "keywords come from the pasted text: ${pasted.keywordsMissing}")
+        assertEquals(pasted.usage.tailoredThisMonth, first.usage.tailoredThisMonth, "regenerating doesn't count again")
+
+        // Regenerating without a description keeps the pasted one; too short is refused; empty goes back to the job's own.
+        assertEquals(full.trim(), client.tailor(jobId).body<ApplicationDto>().pastedDescription)
+        val short = client.post("/applications/$jobId/tailor") { contentType(ContentType.Application.Json); setBody(body("Android role")) }
+        assertEquals(HttpStatusCode.BadRequest, short.status)
+        assertEquals(full.trim(), client.get("/applications/$jobId").body<ApplicationDto>().pastedDescription)
+        val cleared = client.post("/applications/$jobId/tailor") { contentType(ContentType.Application.Json); setBody(body("")) }.body<ApplicationDto>()
+        assertEquals(null, cleared.pastedDescription)
+        assertFalse("Rust" in cleared.keywordsMissing)
+    }
+
+    @Test
     fun freePlanLimitCountsNewApplicationsOnly() = withApp(mapOf("FREE_TAILOR_LIMIT" to "1")) {
         val client = newClient()
         val jobs = client.onboardAndFeed()

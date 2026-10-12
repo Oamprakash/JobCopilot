@@ -38,11 +38,11 @@ export default function ApplyPage() {
     setDirty(false);
   }
 
-  async function generate() {
+  async function generate(jobDescription?: string) {
     setBusy("Tailoring your resume, cover letter and answers…");
     setError(null);
     try {
-      show(await api.tailor(jobId));
+      show(await api.tailor(jobId, undefined, jobDescription));
     } catch (e) {
       if (e instanceof ApiError && e.status === 402) setLimitHit(e.message);
       else setError(e);
@@ -96,9 +96,9 @@ export default function ApplyPage() {
     }
   }
 
-  async function regenerate() {
+  async function regenerate(jobDescription?: string) {
     if (dirty && !window.confirm("Regenerating replaces your edits. Continue?")) return;
-    await generate();
+    await generate(jobDescription);
   }
 
   const header = <AppHeader email={me?.email} />;
@@ -152,7 +152,16 @@ export default function ApplyPage() {
             </p>
             <SourceAttribution source={view.job.source ?? ""} />
           </div>
-          <PartialDescriptionNote partial={view.job.descriptionPartial ?? false} applyUrl={view.job.applyUrl} />
+          {!view.pastedDescription && <PartialDescriptionNote partial={view.job.descriptionPartial ?? false} applyUrl={view.job.applyUrl} />}
+          {(view.job.descriptionPartial || view.pastedDescription) && (
+            <FullDescription
+              key={view.pastedDescription ?? ""}
+              pasted={view.pastedDescription ?? null}
+              applyUrl={view.job.applyUrl}
+              busy={!!busy}
+              onUse={(text) => regenerate(text)}
+            />
+          )}
 
           <nav className="tabs" aria-label="Application parts">
             {(
@@ -189,7 +198,7 @@ export default function ApplyPage() {
             <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || !!busy}>
               {busy === "Saving…" ? "Saving…" : "Save edits"}
             </button>
-            <button type="button" className="btn btn-ghost" onClick={regenerate} disabled={!!busy}>
+            <button type="button" className="btn btn-ghost" onClick={() => regenerate()} disabled={!!busy}>
               Regenerate
             </button>
           </div>
@@ -252,6 +261,55 @@ export default function ApplyPage() {
         </aside>
       </main>
     </>
+  );
+}
+
+const MIN_PASTED = 200;
+
+/**
+ * For jobs whose source gave only a summary: the user pastes the full posting and the draft is rebuilt from it.
+ * "Use the summary" sends "" to go back to the source's text.
+ */
+function FullDescription({ pasted, applyUrl, busy, onUse }: { pasted: string | null; applyUrl: string; busy: boolean; onUse: (text: string) => void }) {
+  const [text, setText] = useState(pasted ?? "");
+  const [open, setOpen] = useState(pasted != null);
+  const trimmed = text.trim();
+  const tooShort = trimmed.length > 0 && trimmed.length < MIN_PASTED;
+  const changed = trimmed !== (pasted ?? "");
+
+  if (!open) {
+    return (
+      <div>
+        <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>
+          Paste the full job description
+        </button>
+      </div>
+    );
+  }
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2>Full job description</h2>
+      <p className="muted small" style={{ margin: 0 }}>
+        {pasted
+          ? "This draft and its keywords are based on the description you pasted."
+          : <>Copy everything from the <a href={applyUrl} target="_blank" rel="noopener noreferrer">job posting</a> and paste it here. The draft is rebuilt from it, which doesn&apos;t use another tailored application.</>}
+      </p>
+      <label className="field">
+        <span className="sr-only">Full job description</span>
+        <textarea className="textarea" rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the whole posting: responsibilities, requirements, nice-to-haves…" />
+      </label>
+      {tooShort && <p className="small missing" style={{ margin: 0 }}>That looks too short for a full description ({trimmed.length} of at least {MIN_PASTED} characters).</p>}
+      <div className="row">
+        <button type="button" className="btn btn-primary" disabled={busy || !trimmed || tooShort || !changed} onClick={() => onUse(trimmed)}>
+          {pasted ? "Re-tailor with this text" : "Re-tailor with full description"}
+        </button>
+        {pasted && (
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onUse("")}>
+            Use the summary instead
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -32,7 +32,11 @@ import java.sql.Connection
 import java.util.UUID
 
 @Serializable
-data class TailorRequest(val questions: List<String>? = null)
+data class TailorRequest(
+    val questions: List<String>? = null,
+    /** The full job description, pasted by the user. Null keeps the current one; "" goes back to the job's own. */
+    val jobDescription: String? = null,
+)
 
 @Serializable
 data class EditApplicationRequest(val application: TailoredApplication)
@@ -67,6 +71,8 @@ data class ApplicationDto(
     val keywordsMissing: List<String>,
     val score: Int?,
     val usage: UsageDto,
+    /** The full description the user pasted for this application, if any. */
+    val pastedDescription: String? = null,
     val updatedAt: String,
     val approvedAt: String?,
 )
@@ -89,7 +95,7 @@ private fun score(c: Connection, userId: UUID, jobId: UUID): Int? =
 private fun toDto(c: Connection, deps: Deps, userId: UUID, stored: StoredApplication): ApplicationDto {
     val job = Jobs.find(c, stored.jobId) ?: throw ApiException(HttpStatusCode.NotFound, "Job not found")
     val profile = Profiles.latest(c, userId)?.profile
-    val forTailoring = JobForTailoring(job.title, job.company, job.description)
+    val forTailoring = JobForTailoring(job.title, job.company, stored.jobDescription ?: job.description)
     return ApplicationDto(
         job = ApplicationJobDto(job.id.toString(), job.title, job.company, job.location, job.applyUrl, job.closed, job.source, job.partial),
         status = stored.status,
@@ -101,6 +107,7 @@ private fun toDto(c: Connection, deps: Deps, userId: UUID, stored: StoredApplica
         keywordsMissing = profile?.let { Keywords.missing(it, forTailoring) }.orEmpty(),
         score = score(c, userId, stored.jobId),
         usage = usage(c, deps, userId),
+        pastedDescription = stored.jobDescription,
         updatedAt = stored.updatedAt.toString(),
         approvedAt = stored.approvedAt?.toString(),
     )
@@ -128,7 +135,7 @@ fun Route.applicationRoutes(deps: Deps) {
             val userId = call.userId()
             val jobId = jobIdParam(call.parameters["jobId"])
             val request = runCatching { call.receive<TailorRequest>() }.getOrDefault(TailorRequest())
-            val stored = deps.tailor.tailor(userId, jobId, request.questions)
+            val stored = deps.tailor.tailor(userId, jobId, request.questions, request.jobDescription)
             call.respond(deps.db.tx { c -> toDto(c, deps, userId, stored) })
         }
 

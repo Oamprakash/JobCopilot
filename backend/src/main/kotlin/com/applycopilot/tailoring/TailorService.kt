@@ -26,7 +26,15 @@ class TailorService(
 ) {
     private val log = LoggerFactory.getLogger(TailorService::class.java)
 
-    suspend fun tailor(userId: UUID, jobId: UUID, requestedQuestions: List<String>?): StoredApplication {
+    /**
+     * [pastedDescription]: null keeps whatever this application used before; blank goes back to the job's own
+     * description; anything else replaces it (for jobs whose source gave only a summary).
+     */
+    suspend fun tailor(userId: UUID, jobId: UUID, requestedQuestions: List<String>?, pastedDescription: String? = null): StoredApplication {
+        val pasted = pastedDescription?.trim()?.replace(Regex("\r\n?"), "\n")
+        if (pasted != null && pasted.isNotEmpty() && pasted.length < MIN_PASTED) {
+            throw ApiException(HttpStatusCode.BadRequest, "That looks too short for a full job description. Paste the whole posting, or leave it empty.")
+        }
         val ctx = db.tx { c ->
             val user = Users.find(c, userId) ?: throw ApiException(HttpStatusCode.Unauthorized, "Not signed in")
             val stored = Profiles.latest(c, userId) ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile first")
@@ -38,7 +46,15 @@ class TailorService(
                     "The free plan includes $freeMonthlyLimit tailored applications a month. Upgrade to Pro for unlimited tailoring.",
                 )
             }
-            Ctx(stored.version, stored.profile, PreferencesTable.find(c, userId) ?: Preferences(), job.let { JobForTailoring(it.title, it.company, it.description) }, existing)
+            val description = when {
+                pasted == null -> existing?.jobDescription
+                pasted.isEmpty() -> null
+                else -> pasted.take(MAX_PASTED)
+            }
+            Ctx(
+                stored.version, stored.profile, PreferencesTable.find(c, userId) ?: Preferences(),
+                JobForTailoring(job.title, job.company, description ?: job.description), existing, description,
+            )
         }
 
         val questions = requestedQuestions?.map { it.trim().take(300) }?.filter { it.isNotEmpty() }?.distinct()?.take(10)
@@ -59,7 +75,7 @@ class TailorService(
         return db.tx { c ->
             Applications.saveDraft(
                 c, userId, jobId, ctx.profileVersion, if (fromClaude != null) "claude" else "heuristic",
-                guarded.application, guarded.removed, questions,
+                guarded.application, guarded.removed, questions, ctx.pastedDescription,
             )
         }
     }
@@ -70,5 +86,11 @@ class TailorService(
         val prefs: Preferences,
         val job: JobForTailoring,
         val existing: StoredApplication?,
+        val pastedDescription: String?,
     )
+
+    companion object {
+        const val MIN_PASTED = 200
+        const val MAX_PASTED = 30_000
+    }
 }

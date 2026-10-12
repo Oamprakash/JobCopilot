@@ -44,6 +44,7 @@ Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","bo
 | Claim guardrail | `TailorGuard` decides what goes out, whoever drafted it. Roles, titles, companies and dates always come from the profile, and every role stays. A bullet may be reordered or reworded, but one that adds a number or skill the profile lacks, or drifts from its source, reverts to the original. Skills must be the user's own. Sentences in the summary, cover letter or answers with unbacked numbers or skills are dropped. Everything removed is listed on the review screen. |
 | Sensitive questions | Pay/CTC, visa, sponsorship and personal or legal questions are never answered for the user. Notice period comes only from preferences. |
 | Review screen | Resume diff (moved up / reworded with the original struck through / unchanged), editable bullets, summary, cover letter and answers, copy buttons, JD keywords covered and missing. The user's own edits are saved but flagged if they claim something the profile doesn't show. |
+| Full description | When a job's source gave only a summary (Adzuna), the review screen offers **Paste the full job description**. The draft, guardrail and keyword coverage are rebuilt from the pasted text (200–30,000 characters), stored with that application only; regenerating keeps it, and **Use the summary instead** goes back. Re-tailoring doesn't use another free-plan application. |
 | Approve + PDF | Approving locks the version and unlocks an ATS-friendly resume PDF and a link to the employer's application page. Editing after approval sends it back to draft. |
 | Free plan | `FREE_TAILOR_LIMIT` (default 5) new tailored applications per calendar month; regenerating one doesn't count again. Pro is unlimited (`users.plan = 'pro'`; billing comes later). |
 
@@ -55,9 +56,10 @@ You need JDK 21, Node 20+ and Docker.
 # 1. Database
 docker compose up -d
 
-# 2. API on :8080 (runs migrations on start)
+# 2. API on :8080 (runs migrations on start). Optional: cp backend/.env.example backend/.env and fill in keys.
 cd backend
-./gradlew run
+./run.sh          # macOS/Linux: loads .env, then ./gradlew run
+.\run.ps1         # Windows PowerShell: loads .env, then gradlew.bat run
 
 # 3. Web on :3000 (proxies /api/* to the API)
 cd web
@@ -67,7 +69,7 @@ npm run dev
 
 `./gradlew run` stays at about 83% for as long as the API is running; that's normal, because the run task only finishes when the server stops. The API on :8080 has no pages of its own, so open the app at http://localhost:3000 and enter any email. In dev the sign-in link is logged by the API and shown on the sign-in page, so no email provider is needed.
 
-To parse resumes with Claude, export `ANTHROPIC_API_KEY` before `./gradlew run`. All settings are in [`backend/.env.example`](backend/.env.example); the API reads them from environment variables.
+All settings are in [`backend/.env.example`](backend/.env.example). The API reads environment variables, not the file itself, so start it with `run.sh` / `run.ps1`, which load `backend/.env` (git-ignored) first; empty values keep the defaults. To set one by hand instead: `export ANTHROPIC_API_KEY=...` (macOS/Linux) or `$env:ANTHROPIC_API_KEY = "..."` (PowerShell), in the same terminal, before `./gradlew run`. If PowerShell refuses to run the script, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
 ## Tests
 
@@ -101,7 +103,7 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | GET/POST | `/admin/companies` | list / add a board (admins) |
 | PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
 | POST | `/admin/ingest` | sync every active board now (admins) |
-| POST | `/applications/{jobId}/tailor` | `{questions?}` → draft (creates or regenerates) |
+| POST | `/applications/{jobId}/tailor` | `{questions?, jobDescription?}` → draft (creates or regenerates); `jobDescription` replaces the job's text for this application, `""` clears it |
 | GET/PUT | `/applications/{jobId}` | the application / save the user's edits `{application}` |
 | POST | `/applications/{jobId}/approve` | lock in the version |
 | GET | `/applications/{jobId}/resume.pdf` | tailored resume as PDF |

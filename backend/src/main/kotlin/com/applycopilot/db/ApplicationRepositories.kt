@@ -19,12 +19,14 @@ data class StoredApplication(
     val createdAt: Instant,
     val updatedAt: Instant,
     val approvedAt: Instant?,
+    /** The full description the user pasted, or null to use the job's own. */
+    val jobDescription: String? = null,
 )
 
 object Applications {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private const val COLUMNS =
-        "id, job_id, profile_version, status, generator, content_json, removed, questions, created_at, updated_at, approved_at"
+        "id, job_id, profile_version, status, generator, content_json, removed, questions, created_at, updated_at, approved_at, job_description"
 
     fun find(c: Connection, userId: UUID, jobId: UUID): StoredApplication? =
         c.prepareStatement("SELECT $COLUMNS FROM applications WHERE user_id = ? AND job_id = ?").use { st ->
@@ -43,14 +45,16 @@ object Applications {
         content: TailoredApplication,
         removed: List<String>,
         questions: List<String>,
+        jobDescription: String?,
     ): StoredApplication =
         c.prepareStatement(
             """
-            INSERT INTO applications (id, user_id, job_id, profile_version, generator, content_json, removed, questions)
-            VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?)
+            INSERT INTO applications (id, user_id, job_id, profile_version, generator, content_json, removed, questions, job_description)
+            VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)
             ON CONFLICT (user_id, job_id) DO UPDATE SET
                 profile_version = EXCLUDED.profile_version, generator = EXCLUDED.generator,
                 content_json = EXCLUDED.content_json, removed = EXCLUDED.removed, questions = EXCLUDED.questions,
+                job_description = EXCLUDED.job_description,
                 status = 'draft', approved_at = NULL, updated_at = now()
             RETURNING $COLUMNS
             """.trimIndent(),
@@ -63,6 +67,7 @@ object Applications {
             st.setString(6, json.encodeToString(TailoredApplication.serializer(), content))
             st.setArray(7, c.createArrayOf("text", removed.toTypedArray()))
             st.setArray(8, c.createArrayOf("text", questions.toTypedArray()))
+            if (jobDescription == null) st.setNull(9, java.sql.Types.VARCHAR) else st.setString(9, jobDescription)
             st.executeQuery().use { rs -> rs.next(); rs.toApplication() }
         }
 
@@ -119,5 +124,6 @@ object Applications {
         createdAt = getTimestamp("created_at").toInstant(),
         updatedAt = getTimestamp("updated_at").toInstant(),
         approvedAt = getTimestamp("approved_at")?.toInstant(),
+        jobDescription = getString("job_description"),
     )
 }
