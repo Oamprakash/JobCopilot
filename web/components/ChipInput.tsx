@@ -10,7 +10,10 @@ type Props = {
   hint?: string;
 };
 
-/** A list of removable chips. Enter or comma adds what's typed; Backspace on an empty box removes the last chip. */
+/**
+ * A list of removable chips. Enter or comma adds what's typed. Backspace only edits the text being typed;
+ * chips are removed with their × button, so holding Backspace can't wipe saved values.
+ */
 export function ChipInput({ label, values, onChange, placeholder, hint }: Props) {
   const id = useId();
   const [draft, setDraft] = useState("");
@@ -29,8 +32,6 @@ export function ChipInput({ label, values, onChange, placeholder, hint }: Props)
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       if (draft.trim()) add(draft);
-    } else if (e.key === "Backspace" && draft === "" && values.length > 0) {
-      onChange(values.slice(0, -1));
     }
   }
 
