@@ -2,7 +2,7 @@
 
 AI job-application copilot: finds well-matched jobs, tailors each application, and autofills forms, while the user always clicks Submit.
 
-This repo is **Phase 1: Foundation**: sign-in, resume upload and parsing, the master profile editor, and job preferences.
+Built so far: **Phase 1 (Foundation)**, which covers sign-in, resume parsing, the master profile and preferences, and **Phase 2 (Job feed)**, which covers board ingestion, matching and the daily feed.
 
 ```
 backend/   Kotlin + Ktor API, Postgres (Flyway), resume parsing (PDFBox, POI, Claude API)
@@ -20,6 +20,20 @@ web/       Next.js 14 app: sign-in, onboarding, profile
 | Master profile | Upload alone saves nothing. The user confirms the fields, and each save creates a new version. |
 | Preferences | Roles, locations, work mode, min CTC, notice period, companies to skip. |
 | Account deletion | One step: removes the user, every profile version, preferences and uploaded files. |
+
+## What works in Phase 2
+
+| Area | What it does |
+| --- | --- |
+| Job sources | Public board APIs only: Greenhouse (`boards-api.greenhouse.io`), Lever (`api.lever.co/v0/postings`), Ashby (`api.ashbyhq.com/posting-api`). No LinkedIn, Naukri or Indeed scraping. 11 verified seed boards with India openings ship in `V2__job_feed.sql`. |
+| Ingestion | Every `INGEST_INTERVAL_HOURS` (default 24): fetch each active board, upsert jobs, close jobs that disappeared. A failed fetch leaves existing jobs open and records the error on the company. |
+| Hard filters | Location (city aliases such as Bangalore/Bengaluru; remote jobs only if open to India or APAC), work mode, role (distinctive words of target roles, with synonyms like android→mobile), experience band from the JD, entry-level titles, companies to skip. |
+| Shortlist | TF-IDF cosine between profile and JD; top 50 go on to scoring. |
+| Fit score | Claude (`CLAUDE_SCORING_MODEL`, batches of 8) for up to 50 jobs per user per day; the rule-based scorer covers the rest, or everything when no API key is set. Claude's "missing skills" are kept only if the JD mentions them. |
+| Feed | New / Saved / Skipped tabs, score, 3 reasons, missing skills, full JD, link to the job. Changing the profile or preferences clears unreviewed matches and rebuilds the feed on the next visit. |
+| Admin | `ADMIN_EMAILS` can list boards, add one (synced straight away, so a wrong token shows its error), pause one, or run a sync. |
+
+Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","boardToken":"acme"}`. The token is the part of the board URL after `boards.greenhouse.io/`, `jobs.lever.co/` or `jobs.ashbyhq.com/`.
 
 ## Run it locally
 
@@ -67,6 +81,13 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | GET | `/profile` | latest version → `{version, profile, resumeFile, updatedAt}` |
 | PUT | `/profile` | `{profile, resumeFileId?}` → new version |
 | GET/PUT | `/preferences` | preferences object |
+| GET | `/feed?status=new\|saved\|skipped` | `{jobs, lastRun, needsRefresh}` |
+| POST | `/feed/refresh` | rebuilds the feed (throttled to once per 2 min unless inputs changed) |
+| PUT | `/feed/{jobId}/status` | `{status}` |
+| GET | `/jobs/{jobId}` | job with full description |
+| GET/POST | `/admin/companies` | list / add a board (admins) |
+| PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
+| POST | `/admin/ingest` | sync every active board now (admins) |
 
 Validation errors return `400 {error, problems: [...]}`.
 
@@ -77,6 +98,6 @@ Validation errors return `400 {error, problems: [...]}`.
 - Uploads go to `STORAGE_DIR` on local disk. `FileStorage` is the seam for moving to Cloudflare R2.
 - `backend/Dockerfile` builds a fat jar image.
 
-## Next: Phase 2 (job feed)
+## Next: Phase 3 (Tailoring)
 
-Ingest Greenhouse, Lever and Ashby boards nightly, apply the hard filters from preferences, then add embedding + LLM fit scores.
+A tailored resume, cover letter and screening answers per job, each with a claim guardrail and a review screen.

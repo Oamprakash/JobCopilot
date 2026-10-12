@@ -30,6 +30,9 @@ export function AppHeader({ email }: { email?: string }) {
           Apply Copilot
         </Link>
         <nav className="header-nav" aria-label="Main">
+          <Link href="/feed" className="nav-link" aria-current={pathname === "/feed" ? "page" : undefined}>
+            Today&apos;s matches
+          </Link>
           <Link href="/profile" className="nav-link" aria-current={pathname === "/profile" ? "page" : undefined}>
             Profile
           </Link>

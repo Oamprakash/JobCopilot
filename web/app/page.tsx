@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     api
       .me()
-      .then((me) => router.replace(me.hasProfile ? "/profile" : "/onboarding"))
+      .then((me) => router.replace(me.hasProfile ? "/feed" : "/onboarding"))
       .catch(() => router.replace("/login"));
   }, [router]);
 

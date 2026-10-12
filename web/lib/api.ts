@@ -48,6 +48,48 @@ export type ResumeFile = { id: string; fileName: string };
 export type ResumeUpload = { resumeFile: ResumeFile; parser: "claude" | "heuristic"; profile: Profile; removed: string[] };
 export type StoredProfile = { version: number; profile: Profile; resumeFile: ResumeFile | null; updatedAt: string };
 
+export type MatchStatus = "new" | "saved" | "skipped";
+
+export type FeedJob = {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean;
+  applyUrl: string;
+  postedAt: string | null;
+  score: number;
+  reasons: string[];
+  missingSkills: string[];
+  scorer: "claude" | "heuristic";
+  status: MatchStatus;
+  closed: boolean;
+};
+
+export type MatchRun = {
+  startedAt: string;
+  finishedAt: string | null;
+  considered: number;
+  passedFilter: number;
+  scored: number;
+  llmScored: number;
+  error: string | null;
+};
+
+export type Feed = { jobs: FeedJob[]; lastRun: MatchRun | null; needsRefresh: boolean };
+
+export type JobDetail = {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean;
+  applyUrl: string;
+  postedAt: string | null;
+  description: string;
+  closed: boolean;
+};
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -99,6 +141,12 @@ export const api = {
   getProfile: () => request<StoredProfile>("/profile"),
   saveProfile: (profile: Profile, resumeFileId?: string) =>
     request<StoredProfile>("/profile", { method: "PUT", body: json({ profile, resumeFileId }) }),
+
+  feed: (status: MatchStatus) => request<Feed>(`/feed?status=${status}`),
+  refreshFeed: () => request<Feed>("/feed/refresh", { method: "POST" }),
+  setMatchStatus: (jobId: string, status: MatchStatus) =>
+    request<{ ok: boolean }>(`/feed/${jobId}/status`, { method: "PUT", body: json({ status }) }),
+  job: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>

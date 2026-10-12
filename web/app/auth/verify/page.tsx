@@ -21,7 +21,7 @@ function Verify() {
     }
     api
       .verify(token)
-      .then((me) => router.replace(me.hasProfile ? "/profile" : "/onboarding"))
+      .then((me) => router.replace(me.hasProfile ? "/feed" : "/onboarding"))
       .catch((e) => setError(e instanceof ApiError ? e.message : "Sign-in failed. Please try again."));
   }, [token, router]);
 

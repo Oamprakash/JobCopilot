@@ -133,11 +133,14 @@ export default function OnboardingPage() {
             <div className="notice notice-good">Profile saved{version ? ` (version ${version})` : ""}.</div>
             <h1>You&apos;re set up</h1>
             <p className="muted" style={{ margin: 0 }}>
-              Your daily matched job feed comes next. Until then you can keep refining your profile and preferences.
+              We&apos;ll now check open jobs against your profile and preferences. New matches arrive every day.
             </p>
             <div className="row">
-              <Link href="/profile" className="btn btn-primary">
-                Go to my profile
+              <Link href="/feed" className="btn btn-primary">
+                See my matches
+              </Link>
+              <Link href="/profile" className="btn btn-secondary">
+                Edit profile
               </Link>
             </div>
           </section>
