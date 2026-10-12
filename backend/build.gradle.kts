@@ -59,3 +59,10 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+// The fat jar (buildFatJar) must merge META-INF/services files: Flyway 10 registers its migration scanners and
+// its Postgres support as service plugins in separate jars, and without merging one overwrites the other,
+// so the packaged app finds no migrations.
+tasks.named("shadowJar") {
+    withGroovyBuilder { "mergeServiceFiles"() }
+}
