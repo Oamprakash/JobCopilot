@@ -19,6 +19,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # Integration tests start Postgres with Testcontainers (Docker is available on ubuntu-latest).
       - run: ./gradlew test --no-daemon
+      # Surface test counts as an annotation so they show on the run page without opening logs.
+      - name: Summarize tests
+        if: always()
+        run: |
+          python3 - <<'EOF'
+          import glob, xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for path in glob.glob("build/test-results/test/*.xml"):
+              r = ET.parse(path).getroot()
+              t += int(r.get("tests", 0)); f += int(r.get("failures", 0))
+              e += int(r.get("errors", 0)); s += int(r.get("skipped", 0))
+          print(f"::notice title=Backend tests::{t - f - e - s} passed, {f + e} failed, {s} skipped of {t}")
+          EOF
       - run: ./gradlew buildFatJar --no-daemon
       - uses: actions/upload-artifact@v4
         if: always()
