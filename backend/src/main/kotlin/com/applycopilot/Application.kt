@@ -2,6 +2,7 @@ package com.applycopilot
 
 import com.applycopilot.api.ErrorResponse
 import com.applycopilot.api.HealthResponse
+import com.applycopilot.api.RootResponse
 import com.applycopilot.api.UserPrincipal
 import com.applycopilot.api.accountRoutes
 import com.applycopilot.api.adminRoutes
@@ -78,6 +79,10 @@ fun Application.module(deps: Deps) {
     }
 
     routing {
+        // Opening the API port in a browser lands here; the app itself is the web server on WEB_BASE_URL.
+        get("/") {
+            call.respond(RootResponse("Apply Copilot API is running. Open the app at ${deps.config.webBaseUrl}", deps.config.webBaseUrl))
+        }
         get("/health") {
             deps.db.tx { c -> c.prepareStatement("SELECT 1").use { it.executeQuery().use { rs -> rs.next() } } }
             call.respond(HealthResponse("ok"))

@@ -38,3 +38,6 @@ data class ProfileResponse(val version: Int, val profile: Profile, val resumeFil
 
 @Serializable
 data class HealthResponse(val status: String)
+
+@Serializable
+data class RootResponse(val message: String, val web: String)

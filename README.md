@@ -53,7 +53,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and enter any email. In dev the sign-in link is logged by the API and shown on the sign-in page, so no email provider is needed.
+`./gradlew run` stays at about 83% for as long as the API is running; that's normal, because the run task only finishes when the server stops. The API on :8080 has no pages of its own, so open the app at http://localhost:3000 and enter any email. In dev the sign-in link is logged by the API and shown on the sign-in page, so no email provider is needed.
 
 To parse resumes with Claude, export `ANTHROPIC_API_KEY` before `./gradlew run`. All settings are in [`backend/.env.example`](backend/.env.example); the API reads them from environment variables.
 
