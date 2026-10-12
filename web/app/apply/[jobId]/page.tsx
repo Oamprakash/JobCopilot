@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { PartialDescriptionNote, SourceAttribution } from "@/components/SourceAttribution";
 import { Problems } from "@/components/Problems";
 import {
   api,
@@ -149,7 +150,9 @@ export default function ApplyPage() {
               {view.job.title} · {view.job.company}
               {view.job.closed && <span className="badge-closed">No longer open</span>}
             </p>
+            <SourceAttribution source={view.job.source ?? ""} />
           </div>
+          <PartialDescriptionNote partial={view.job.descriptionPartial ?? false} applyUrl={view.job.applyUrl} />
 
           <nav className="tabs" aria-label="Application parts">
             {(

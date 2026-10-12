@@ -106,18 +106,27 @@ data class JobDetail(
     val applyUrl: String,
     val postedAt: Instant?,
     val closed: Boolean,
+    /** "greenhouse", "lever", ... or "adzuna" for aggregator jobs. */
+    val source: String = "",
+    /** True when [description] is only the source's summary of the job. */
+    val partial: Boolean = false,
 )
+
+/** The employer shown for a job: an aggregator job's own employer, otherwise the board's company. */
+private const val EMPLOYER = "coalesce(j.employer, co.name)"
 
 object Jobs {
     /** Inserts or refreshes a posting; returns true when it is new. Reopens a job that had been closed. */
     fun upsert(c: Connection, companyId: UUID, source: String, p: JobPosting): Boolean =
         c.prepareStatement(
             """
-            INSERT INTO jobs (id, company_id, source, source_job_id, title, location, remote, description, apply_url, posted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO jobs (id, company_id, source, source_job_id, title, location, remote, description, apply_url, posted_at,
+                              employer, description_partial)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (source, source_job_id) DO UPDATE SET
                 title = EXCLUDED.title, location = EXCLUDED.location, remote = EXCLUDED.remote,
                 description = EXCLUDED.description, apply_url = EXCLUDED.apply_url,
+                employer = EXCLUDED.employer, description_partial = EXCLUDED.description_partial,
                 posted_at = coalesce(EXCLUDED.posted_at, jobs.posted_at),
                 last_seen_at = now(), closed_at = NULL
             RETURNING (xmax = 0) AS inserted
@@ -133,6 +142,8 @@ object Jobs {
             st.setString(8, p.description)
             st.setString(9, p.applyUrl.take(1000))
             if (p.postedAt == null) st.setNull(10, Types.TIMESTAMP_WITH_TIMEZONE) else st.setTimestamp(10, Timestamp.from(p.postedAt))
+            if (p.employer == null) st.setNull(11, Types.VARCHAR) else st.setString(11, p.employer.take(200))
+            st.setBoolean(12, p.partial)
             st.executeQuery().use { rs -> rs.next(); rs.getBoolean("inserted") }
         }
 
@@ -146,15 +157,33 @@ object Jobs {
             st.executeUpdate()
         }
 
+    /**
+     * Closes this source's open jobs not seen for [days]. For aggregators, whose searches return only part of
+     * their listings, a job missing from one search hasn't necessarily closed, so it gets this grace period.
+     */
+    fun closeUnseen(c: Connection, companyId: UUID, days: Int): Int =
+        c.prepareStatement(
+            "UPDATE jobs SET closed_at = now() WHERE company_id = ? AND closed_at IS NULL AND last_seen_at < now() - make_interval(days => ?)",
+        ).use { st ->
+            st.setObject(1, companyId)
+            st.setInt(2, days)
+            st.executeUpdate()
+        }
+
     /** Open, recent jobs this user has no match row for yet. */
     fun candidatesFor(c: Connection, userId: UUID, limit: Int = 3000): List<JobForMatching> =
         c.prepareStatement(
             """
-            SELECT j.id, co.name, j.title, j.location, j.remote, j.description
+            SELECT j.id, $EMPLOYER, j.title, j.location, j.remote, j.description
             FROM jobs j JOIN companies co ON co.id = j.company_id
             WHERE j.closed_at IS NULL AND co.active
               AND (j.posted_at IS NULL OR j.posted_at > now() - interval '60 days')
               AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.user_id = ? AND m.job_id = j.id)
+              -- An aggregator copy of a job we also read from the employer's own board: keep the board's.
+              AND NOT (j.employer IS NOT NULL AND EXISTS (
+                  SELECT 1 FROM jobs b JOIN companies bc ON bc.id = b.company_id
+                  WHERE b.employer IS NULL AND b.closed_at IS NULL AND bc.active
+                    AND lower(bc.name) = lower(j.employer) AND lower(b.title) = lower(j.title)))
             ORDER BY j.first_seen_at DESC
             LIMIT ?
             """.trimIndent(),
@@ -193,7 +222,8 @@ object Jobs {
     fun find(c: Connection, id: UUID): JobDetail? =
         c.prepareStatement(
             """
-            SELECT j.id, co.name, j.title, j.location, j.remote, j.description, j.apply_url, j.posted_at, j.closed_at
+            SELECT j.id, $EMPLOYER, j.title, j.location, j.remote, j.description, j.apply_url, j.posted_at, j.closed_at,
+                   j.source, j.description_partial
             FROM jobs j JOIN companies co ON co.id = j.company_id WHERE j.id = ?
             """.trimIndent(),
         ).use { st ->
@@ -209,6 +239,8 @@ object Jobs {
                     applyUrl = rs.getString(7),
                     postedAt = rs.getTimestamp(8)?.toInstant(),
                     closed = rs.getTimestamp(9) != null,
+                    source = rs.getString(10),
+                    partial = rs.getBoolean(11),
                 )
             }
         }
@@ -258,8 +290,8 @@ object Matches {
     fun feed(c: Connection, userId: UUID, status: String, minScore: Int, limit: Int = 100): List<FeedRow> =
         c.prepareStatement(
             """
-            SELECT j.id, co.name, j.title, j.location, j.remote, j.apply_url, j.posted_at, j.closed_at,
-                   m.score, m.reasons, m.missing_skills, m.scorer, m.status
+            SELECT j.id, $EMPLOYER, j.title, j.location, j.remote, j.apply_url, j.posted_at, j.closed_at,
+                   m.score, m.reasons, m.missing_skills, m.scorer, m.status, j.source, j.description_partial
             FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
             WHERE m.user_id = ? AND m.status = ? AND m.score >= ?
               AND (m.status <> 'new' OR j.closed_at IS NULL)
@@ -285,6 +317,8 @@ object Matches {
                                 applyUrl = rs.getString(6),
                                 postedAt = rs.getTimestamp(7)?.toInstant(),
                                 closed = rs.getTimestamp(8) != null,
+                                source = rs.getString(14),
+                                partial = rs.getBoolean(15),
                             ),
                             score = rs.getInt(9),
                             reasons = rs.textArray(10),
@@ -425,5 +459,55 @@ object MatchRuns {
     fun usersWithProfiles(c: Connection): List<UUID> =
         c.prepareStatement("SELECT DISTINCT user_id FROM profiles").use { st ->
             st.executeQuery().use { rs -> buildList { while (rs.next()) add(rs.getObject(1, UUID::class.java)) } }
+        }
+}
+
+/** Searches run against an aggregator, and the per-day call count that keeps them inside its quota. */
+object AggregatorQueries {
+    /** When this search last ran successfully, or null if it never has. */
+    fun lastRun(c: Connection, source: String, what: String, where: String): Instant? =
+        c.prepareStatement("SELECT last_run_at FROM aggregator_queries WHERE source = ? AND what = ? AND location = ? AND last_error IS NULL").use { st ->
+            st.setString(1, source)
+            st.setString(2, what)
+            st.setString(3, where)
+            st.executeQuery().use { rs -> if (rs.next()) rs.getTimestamp(1)?.toInstant() else null }
+        }
+
+    fun record(c: Connection, source: String, what: String, where: String, count: Int?, error: String?) {
+        c.prepareStatement(
+            """
+            INSERT INTO aggregator_queries (source, what, location, last_run_at, last_count, last_error) VALUES (?, ?, ?, now(), ?, ?)
+            ON CONFLICT (source, what, location) DO UPDATE SET
+                last_run_at = now(), last_count = EXCLUDED.last_count, last_error = EXCLUDED.last_error
+            """.trimIndent(),
+        ).use { st ->
+            st.setString(1, source)
+            st.setString(2, what)
+            st.setString(3, where)
+            if (count == null) st.setNull(4, Types.INTEGER) else st.setInt(4, count)
+            if (error == null) st.setNull(5, Types.VARCHAR) else st.setString(5, error.take(500))
+            st.executeUpdate()
+        }
+    }
+
+    /** Takes one call from today's (UTC) budget. False when the budget is spent. */
+    fun takeCall(c: Connection, source: String, dailyLimit: Int): Boolean =
+        c.prepareStatement(
+            """
+            INSERT INTO aggregator_calls (source, day, calls) VALUES (?, (now() AT TIME ZONE 'UTC')::date, 1)
+            ON CONFLICT (source, day) DO UPDATE SET calls = aggregator_calls.calls + 1
+            WHERE aggregator_calls.calls < ?
+            RETURNING calls
+            """.trimIndent(),
+        ).use { st ->
+            st.setString(1, source)
+            st.setInt(2, dailyLimit)
+            st.executeQuery().use { rs -> rs.next() && rs.getInt(1) <= dailyLimit }
+        }
+
+    fun callsToday(c: Connection, source: String): Int =
+        c.prepareStatement("SELECT calls FROM aggregator_calls WHERE source = ? AND day = (now() AT TIME ZONE 'UTC')::date").use { st ->
+            st.setString(1, source)
+            st.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
         }
 }

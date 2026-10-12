@@ -57,12 +57,19 @@ class FeedApiTest {
 
     private val json = headersOf(HttpHeaders.ContentType, "application/json")
 
+    /** Every Adzuna search the app made, in order. */
+    private val adzunaCalls = mutableListOf<io.ktor.http.Url>()
+
     private fun mockHttp() = HttpClient(
         MockEngine { request ->
             when (request.url.host) {
                 "boards-api.greenhouse.io" -> respond(BoardFixtures.greenhouse(greenhouseHasAndroid), HttpStatusCode.OK, json)
                 "api.lever.co" -> respond(BoardFixtures.lever, HttpStatusCode.OK, json)
                 "api.ashbyhq.com" -> respond(BoardFixtures.ashby, HttpStatusCode.OK, json)
+                "api.adzuna.com" -> {
+                    adzunaCalls += request.url
+                    respond(BoardFixtures.adzuna, HttpStatusCode.OK, json)
+                }
                 "api.anthropic.com" -> {
                     val body = (request.body as TextContent).text
                     val handler = claudeScoring
@@ -285,6 +292,44 @@ class FeedApiTest {
         client.put("/feed/${weak.jobs.first().jobId}/status") { contentType(ContentType.Application.Json); setBody(StatusRequest("saved")) }
         assertEquals(1, client.feed("saved").jobs.size)
         assertEquals(2, client.feed().hiddenWeak)
+    }
+
+    @Test
+    fun adzunaJobsJoinTheFeedWithinTheCallBudget() = withApp(
+        mapOf("ADZUNA_APP_ID" to "test-id", "ADZUNA_APP_KEY" to "test-key", "ADZUNA_DAILY_CALLS" to "3"),
+    ) { deps ->
+        deps.db.tx { c -> Companies.insert(c, "Adzuna", "adzuna", "in") }
+        deps.ingestion.syncAll()
+        assertTrue(adzunaCalls.isEmpty(), "no user has preferences yet, so there is nothing to search")
+
+        val client = newClient()
+        client.onboard(prefs)
+        val feed = client.post("/feed/refresh?weak=true").body<FeedResponse>()
+        assertEquals(listOf("bangalore", "chennai"), adzunaCalls.map { it.parameters["where"] })
+        assertTrue(adzunaCalls.all { it.parameters["what"] == "android" && it.parameters["app_id"] == "test-id" })
+
+        val flipkart = feed.jobs.single { it.company == "Flipkart" }
+        assertEquals("adzuna", flipkart.source)
+        assertTrue(flipkart.descriptionPartial)
+        assertTrue(flipkart.applyUrl.startsWith("https://www.adzuna.in/land/ad/4810001"))
+        // Acme's own Greenhouse posting wins over Adzuna's copy of it.
+        assertEquals("greenhouse", feed.jobs.single { it.title == "Senior Android Engineer" }.source)
+        val detail = client.get("/jobs/${flipkart.jobId}").body<JobDetailDto>()
+        assertTrue(detail.descriptionPartial)
+        assertEquals("Flipkart", detail.company)
+
+        // A new city searches only that city; the others ran today. Then the daily budget (3) is spent.
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(locations = prefs.locations + "Hyderabad")) }
+        client.post("/feed/refresh")
+        assertEquals(listOf("bangalore", "chennai", "hyderabad"), adzunaCalls.map { it.parameters["where"] })
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(locations = prefs.locations + "Pune")) }
+        assertEquals(HttpStatusCode.OK, client.post("/feed/refresh").status)
+        assertEquals(3, adzunaCalls.size)
+
+        // The daily sync respects the same budget and freshness.
+        val adzunaResult = deps.ingestion.syncAll().single { it.company.ats == "adzuna" }
+        assertEquals(null, adzunaResult.error)
+        assertEquals(3, adzunaCalls.size)
     }
 
     @Test

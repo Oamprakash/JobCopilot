@@ -64,6 +64,10 @@ export type FeedJob = {
   scorer: "claude" | "heuristic";
   status: MatchStatus;
   closed: boolean;
+  /** A board ("greenhouse", ...) or "adzuna". */
+  source?: string;
+  /** Only a summary of the description is available. */
+  descriptionPartial?: boolean;
 };
 
 export type MatchRun = {
@@ -95,6 +99,8 @@ export type JobDetail = {
   postedAt: string | null;
   description: string;
   closed: boolean;
+  source?: string;
+  descriptionPartial?: boolean;
 };
 
 export type BulletChange = "unchanged" | "moved_up" | "reworded";
@@ -125,7 +131,16 @@ export type TailoredApplication = { resume: TailoredResume; coverLetter: string;
 export type Usage = { plan: "free" | "pro"; tailoredThisMonth: number; limit: number | null };
 export type ApplicationStatus = "draft" | "approved" | "applied" | "interview" | "offer" | "rejected";
 export type ApplicationView = {
-  job: { jobId: string; title: string; company: string; location: string; applyUrl: string; closed: boolean };
+  job: {
+    jobId: string;
+    title: string;
+    company: string;
+    location: string;
+    applyUrl: string;
+    closed: boolean;
+    source?: string;
+    descriptionPartial?: boolean;
+  };
   status: ApplicationStatus;
   generator: "claude" | "heuristic";
   application: TailoredApplication;

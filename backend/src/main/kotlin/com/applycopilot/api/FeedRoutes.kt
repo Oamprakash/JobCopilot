@@ -23,9 +23,12 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger("com.applycopilot.api.FeedRoutes")
 
 /** Unreviewed matches below this score stay out of the New tab unless the user asks for weaker matches. */
 const val MIN_FEED_SCORE = 40
@@ -46,6 +49,10 @@ data class FeedJobDto(
     val scorer: String,
     val status: String,
     val closed: Boolean,
+    /** Where the job came from: a board ("greenhouse", ...) or "adzuna". Aggregator jobs carry its attribution. */
+    val source: String = "",
+    /** True when only a summary of the description is available. */
+    val descriptionPartial: Boolean = false,
 )
 
 @Serializable
@@ -88,6 +95,8 @@ data class JobDetailDto(
     val postedAt: String?,
     val description: String,
     val closed: Boolean,
+    val source: String = "",
+    val descriptionPartial: Boolean = false,
 )
 
 @Serializable
@@ -125,6 +134,8 @@ private fun FeedRow.toDto() = FeedJobDto(
     scorer = scorer,
     status = status,
     closed = job.closed,
+    source = job.source,
+    descriptionPartial = job.partial,
 )
 
 private fun MatchRun.toDto() = MatchRunDto(startedAt.toString(), finishedAt?.toString(), considered, passedFilter, scored, llmScored, error, filtered, suggestions)
@@ -177,6 +188,8 @@ fun Route.feedRoutes(deps: Deps) {
             call.respond(current)
             return@post
         }
+        // Fetch this user's aggregator searches first if they haven't run today, so new preferences show results now.
+        runCatching { deps.ingestion.syncAggregatorFor(userId) }.onFailure { log.warn("Aggregator search failed for {}", userId, it) }
         deps.matching.refresh(userId) ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile first")
         call.respond(feedResponse(deps, userId, "new", weak))
     }
@@ -197,7 +210,10 @@ fun Route.feedRoutes(deps: Deps) {
         val jobId = uuidParam(call.parameters["jobId"], "Job")
         val job = deps.db.tx { c -> Jobs.find(c, jobId) } ?: throw ApiException(HttpStatusCode.NotFound, "Job not found")
         call.respond(
-            JobDetailDto(job.id.toString(), job.title, job.company, job.location, job.remote, job.applyUrl, job.postedAt?.toString(), job.description, job.closed),
+            JobDetailDto(
+                job.id.toString(), job.title, job.company, job.location, job.remote, job.applyUrl, job.postedAt?.toString(),
+                job.description, job.closed, job.source, job.partial,
+            ),
         )
     }
 }

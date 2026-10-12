@@ -1,5 +1,7 @@
 package com.applycopilot.config
 
+import com.applycopilot.jobs.AdzunaConfig
+
 data class MailConfig(val resendApiKey: String, val from: String)
 
 data class AppConfig(
@@ -25,6 +27,8 @@ data class AppConfig(
     val schedulerEnabled: Boolean = false,
     /** Tailored applications a free user may start per calendar month. */
     val freeTailorLimit: Int = 5,
+    /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
+    val adzuna: AdzunaConfig? = null,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -62,6 +66,19 @@ data class AppConfig(
                 // Off in tests so nothing calls real job boards; on by default everywhere else.
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
+                adzuna = adzunaConfig(env),
+            )
+        }
+
+        private fun adzunaConfig(env: Map<String, String>): AdzunaConfig? {
+            val id = env["ADZUNA_APP_ID"]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            val key = env["ADZUNA_APP_KEY"]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            return AdzunaConfig(
+                appId = id,
+                appKey = key,
+                country = env["ADZUNA_COUNTRY"]?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "in",
+                // The free key allows 250 calls a day and 2,500 a month; 60 a day stays inside both.
+                dailyCalls = env["ADZUNA_DAILY_CALLS"]?.toInt() ?: 60,
             )
         }
     }

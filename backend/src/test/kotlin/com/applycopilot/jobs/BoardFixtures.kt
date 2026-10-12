@@ -90,4 +90,22 @@ object BoardFixtures {
            "description": "<p>Growth</p>"}
         ]}
     """.trimIndent()
+
+    /** One Adzuna search page: a new employer, a copy of Acme's Greenhouse job, and an off-target role. */
+    val adzuna = """
+        {"count": 3, "mean": 2400000, "results": [
+          {"id": "4810001", "title": "Senior <strong>Android</strong> Developer", "created": "${publishedAt}",
+           "description": "Build the Flipkart app in Kotlin and Jetpack Compose. 8+ years of Android experience&hellip;",
+           "redirect_url": "https://www.adzuna.in/land/ad/4810001?se=x&amp;v=1",
+           "company": {"display_name": "Flipkart"}, "location": {"display_name": "Bengaluru, Karnataka", "area": ["India", "Karnataka", "Bengaluru"]},
+           "category": {"label": "IT Jobs"}},
+          {"id": "4810002", "title": "Senior Android Engineer", "created": "${publishedAt}",
+           "description": "Build our Android app with Kotlin.", "redirect_url": "https://www.adzuna.in/land/ad/4810002",
+           "company": {"display_name": "Acme"}, "location": {"display_name": "Bangalore"}},
+          {"id": "4810003", "title": "Android Sales Executive (Remote)", "created": "${publishedAt}",
+           "description": "Sell phones.", "redirect_url": "https://www.adzuna.in/land/ad/4810003",
+           "location": {"display_name": "India"}},
+          {"id": "4810004", "title": "No link", "description": "Dropped: no redirect_url."}
+        ]}
+    """.trimIndent()
 }

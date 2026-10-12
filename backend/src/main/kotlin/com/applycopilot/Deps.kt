@@ -6,6 +6,7 @@ import com.applycopilot.auth.Mailer
 import com.applycopilot.auth.ResendMailer
 import com.applycopilot.config.AppConfig
 import com.applycopilot.db.Db
+import com.applycopilot.jobs.AdzunaClient
 import com.applycopilot.jobs.AtsClient
 import com.applycopilot.jobs.IngestionService
 import com.applycopilot.matching.AutocompleteService
@@ -51,7 +52,12 @@ class Deps(
                 mailer = config.mail?.let { ResendMailer(http, it) } ?: ConsoleMailer(),
                 jwt = JwtService(config.jwtSecret),
                 parsing = ResumeParsingService(claude),
-                ingestion = IngestionService(db, AtsClient(http)),
+                ingestion = IngestionService(
+                    db,
+                    AtsClient(http),
+                    adzuna = config.adzuna?.let { AdzunaClient(http, it) },
+                    adzunaDailyCalls = config.adzuna?.dailyCalls ?: 0,
+                ),
                 matching = MatchingService(db, scorer),
                 tailor = TailorService(db, config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }, config.freeTailorLimit),
                 onClose = listOf(db, http),

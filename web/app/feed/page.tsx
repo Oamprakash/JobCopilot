@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { PartialDescriptionNote, SourceAttribution } from "@/components/SourceAttribution";
 import { Problems } from "@/components/Problems";
 import {
   api,
@@ -270,6 +271,7 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
             {[job.company, job.location || null, job.remote ? "Remote" : null, posted(job.postedAt)].filter(Boolean).join(" · ")}
             {job.closed && <span className="badge-closed">No longer open</span>}
           </p>
+          <SourceAttribution source={job.source ?? ""} />
         </div>
         {job.reasons.length > 0 && (
           <ul className="reasons">
@@ -282,6 +284,7 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
         <button type="button" className="btn btn-ghost small" style={{ alignSelf: "flex-start", paddingInline: 0 }} onClick={toggle} aria-expanded={open}>
           {open ? "Hide job description" : "Show job description"}
         </button>
+        {open && <PartialDescriptionNote partial={job.descriptionPartial ?? false} applyUrl={job.applyUrl} />}
         {open && <div className="jd">{detail ? detail.description || "No description provided." : "Loading…"}</div>}
       </div>
       <div className="job-actions">

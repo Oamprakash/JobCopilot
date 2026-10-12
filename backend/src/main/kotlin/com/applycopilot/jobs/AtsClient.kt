@@ -31,7 +31,11 @@ enum class Ats(val id: String) {
     }
 }
 
-/** One posting from a public job board, normalized across ATSs. [description] is plain text. */
+/**
+ * One posting from a public job board or aggregator, normalized across sources. [description] is plain text.
+ * [employer] is set by aggregators, whose postings come from many companies; [partial] means the source gave
+ * only a summary of the description.
+ */
 data class JobPosting(
     val sourceJobId: String,
     val title: String,
@@ -40,6 +44,8 @@ data class JobPosting(
     val description: String,
     val applyUrl: String,
     val postedAt: Instant?,
+    val employer: String? = null,
+    val partial: Boolean = false,
 )
 
 class AtsException(message: String) : RuntimeException(message)

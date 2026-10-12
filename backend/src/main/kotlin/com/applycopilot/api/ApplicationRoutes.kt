@@ -38,7 +38,17 @@ data class TailorRequest(val questions: List<String>? = null)
 data class EditApplicationRequest(val application: TailoredApplication)
 
 @Serializable
-data class ApplicationJobDto(val jobId: String, val title: String, val company: String, val location: String, val applyUrl: String, val closed: Boolean)
+data class ApplicationJobDto(
+    val jobId: String,
+    val title: String,
+    val company: String,
+    val location: String,
+    val applyUrl: String,
+    val closed: Boolean,
+    val source: String = "",
+    /** Tailoring worked from a summary of the job, not its full description. */
+    val descriptionPartial: Boolean = false,
+)
 
 @Serializable
 data class UsageDto(val plan: String, val tailoredThisMonth: Int, val limit: Int?)
@@ -81,7 +91,7 @@ private fun toDto(c: Connection, deps: Deps, userId: UUID, stored: StoredApplica
     val profile = Profiles.latest(c, userId)?.profile
     val forTailoring = JobForTailoring(job.title, job.company, job.description)
     return ApplicationDto(
-        job = ApplicationJobDto(job.id.toString(), job.title, job.company, job.location, job.applyUrl, job.closed),
+        job = ApplicationJobDto(job.id.toString(), job.title, job.company, job.location, job.applyUrl, job.closed, job.source, job.partial),
         status = stored.status,
         generator = stored.generator,
         application = stored.content,

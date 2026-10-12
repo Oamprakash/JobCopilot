@@ -118,4 +118,55 @@ class AtsClientTest {
         assertFailsWith<IllegalArgumentException> { client.fetch(Ats.LEVER, "../admin") }
         Unit
     }
+
+    @Test
+    fun parsesAdzunaSearchResults() = runBlocking {
+        val urls = mutableListOf<io.ktor.http.Url>()
+        val adzuna = AdzunaClient(
+            HttpClient(
+                MockEngine { request ->
+                    urls += request.url
+                    respond(BoardFixtures.adzuna, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+                },
+            ),
+            AdzunaConfig("id1", "key1"),
+        )
+        val page = adzuna.search(SearchQuery("android", "chennai"), page = 2)
+        val url = urls.single()
+        assertEquals("/v1/api/jobs/in/search/2", url.encodedPath)
+        assertEquals("id1", url.parameters["app_id"])
+        assertEquals("key1", url.parameters["app_key"])
+        assertEquals("android", url.parameters["what"])
+        assertEquals("chennai", url.parameters["where"])
+        assertEquals("50", url.parameters["results_per_page"])
+        assertEquals(3, page.total)
+        assertEquals(3, page.postings.size, "a result without a link is dropped")
+
+        val flipkart = page.postings.first()
+        assertEquals("in:4810001", flipkart.sourceJobId)
+        assertEquals("Senior Android Developer", flipkart.title)
+        assertEquals("Flipkart", flipkart.employer)
+        assertEquals("Bengaluru, Karnataka, India", flipkart.location)
+        assertTrue(flipkart.partial)
+        assertTrue(flipkart.description.endsWith("experience…"), flipkart.description)
+        assertEquals("https://www.adzuna.in/land/ad/4810001?se=x&amp;v=1", flipkart.applyUrl)
+        assertEquals(BoardFixtures.publishedAt, flipkart.postedAt)
+        assertFalse(flipkart.remote)
+
+        val sales = page.postings[2]
+        assertEquals("Employer not named", sales.employer)
+        assertEquals("India", sales.location)
+        assertTrue(sales.remote)
+
+        // Searching the whole country sends no "where".
+        adzuna.search(SearchQuery("android", ""))
+        assertEquals(null, urls.last().parameters["where"])
+    }
+
+    @Test
+    fun adzunaKeyErrorsAreExplained() = runBlocking {
+        val adzuna = AdzunaClient(HttpClient(MockEngine { respond("{}", HttpStatusCode.Unauthorized) }), AdzunaConfig("id1", "bad"))
+        val e = assertFailsWith<AtsException> { adzuna.search(SearchQuery("android", "")) }
+        assertTrue(e.message!!.contains("app id or key"), e.message)
+    }
 }
