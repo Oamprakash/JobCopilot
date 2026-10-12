@@ -73,6 +73,17 @@ npm run dev
 
 All settings are in [`backend/.env.example`](backend/.env.example). The API reads environment variables, not the file itself, so start it with `run.sh` / `run.ps1`, which load `backend/.env` (git-ignored) first; empty values keep the defaults. To set one by hand instead: `export ANTHROPIC_API_KEY=...` (macOS/Linux) or `$env:ANTHROPIC_API_KEY = "..."` (PowerShell), in the same terminal, before `./gradlew run`. If PowerShell refuses to run the script, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
+## Deploy to Render (free, always online)
+
+`render.yaml` is a Render Blueprint: one free Docker web service in Singapore that runs the API and the web app together (`deploy/render.Dockerfile`), plus a free Postgres database. CI builds this image and smoke-tests it at 512 MB on every push.
+
+1. Sign in at [render.com](https://render.com) with GitHub.
+2. **New → Blueprint**, pick this repository. Render reads `render.yaml`.
+3. Fill in the prompted values: `ADMIN_EMAILS` (you), `INVITE_EMAILS` (who may sign in; empty lets anyone in), and optionally `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` / `ANTHROPIC_API_KEY`. Click **Apply**. The first build takes about 10 minutes.
+4. Open the service URL (`https://jobcopilot….onrender.com`). Invited users see their sign-in link on screen. Admin links are never shown on screen: find yours under the service's **Logs** ("Magic link for …").
+
+Free-tier limits: the service sleeps after 15 idle minutes (the next visit takes about a minute), the free database expires 30 days after creation, and uploaded resume files don't survive a restart (parsed profiles do, they're in the database). Every push to `main` redeploys. For real users: a paid instance and database, an email service (`RESEND_API_KEY`, then `APP_ENV=prod`), and file storage.
+
 ## Share a preview (Cloudflare Tunnel)
 
 To let someone try the app running on your computer, without deploying it:
