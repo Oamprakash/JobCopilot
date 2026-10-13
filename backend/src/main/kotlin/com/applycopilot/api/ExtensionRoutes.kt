@@ -58,6 +58,8 @@ data class ExtApplication(
     val status: String,
     val coverLetter: String,
     val answers: List<ExtAnswer>,
+    /** The tailored resume's skills, most relevant to this job first. */
+    val skills: List<String> = emptyList(),
     /** Path under the API base (prefix with /api in the browser) to the tailored resume PDF. */
     val resumePath: String,
     val resumeFileName: String,
@@ -172,6 +174,7 @@ fun Route.extensionRoutes(deps: Deps) {
                             status = stored.status,
                             coverLetter = stored.content.coverLetter,
                             answers = stored.content.answers.filter { it.answer.isNotBlank() }.map { ExtAnswer(it.question, it.answer) },
+                            skills = stored.content.resume.skills,
                             resumePath = "/ext/applications/${m.jobId}/resume.pdf",
                             resumeFileName = pdfName(stored.content.resume.fullName, m.company),
                         )
@@ -181,7 +184,7 @@ fun Route.extensionRoutes(deps: Deps) {
                 // people can read. The event says only that autofill ran, and for which of the user's own applications.
                 Events.record(c, userId, EventTypes.EXTENSION_AUTOFILL, application?.let { match.jobId }, Events.data("matched" to (application != null)))
                 AutofillResponse(
-                    profile = Autofill.profileFields(profile, user.email),
+                    profile = Autofill.profileFields(profile, user.email, com.applycopilot.db.PreferencesTable.find(c, userId)),
                     application = application,
                     recent = recent.take(10).map { ExtApplicationSummary(it.jobId.toString(), it.title, it.company, it.status) },
                     trackerStage = match?.let { Tracker.find(c, userId, it.jobId)?.stage },

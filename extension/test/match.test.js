@@ -64,3 +64,32 @@ test("matches questions to tailored answers", () => {
   assert.equal(M.pickAnswer("Describe a challenging project", answers), null);
   assert.equal(M.words("legalNameSection_firstName"), "legal name section first name");
 });
+
+test("skills boxes and dropdowns", () => {
+  assert.equal(M.classify("Type your skills here"), "skills");
+  assert.equal(M.classify("Key Skills"), "skills");
+  assert.equal(M.classify("Tech stack"), "skills");
+  assert.equal(M.classify("Years of experience with these skills"), "skills");
+
+  assert.equal(M.classifySelect("Years of Experience *"), "experienceYears");
+  assert.equal(M.classifySelect("Notice Period"), "noticePeriod");
+  assert.equal(M.classifySelect("Position Applying for"), "position");
+  assert.equal(M.classifySelect("Qualification"), null);
+
+  const years = ["Select", "0-1 Year", "1-3 Years", "3-5 Years", "5+ Years", "10+ Years"];
+  assert.equal(M.chooseOption("experienceYears", years, { years: 12 }), 5, "10+ beats 5+ for 12 years");
+  assert.equal(M.chooseOption("experienceYears", years, { years: 4 }), 3);
+  assert.equal(M.chooseOption("experienceYears", years, { years: 0.5 }), 1);
+  assert.equal(M.chooseOption("experienceYears", years, { years: null }), -1);
+
+  const notice = ["Immediately Available", "15 Days", "30 Days", "60 Days", "90 Days"];
+  assert.equal(M.chooseOption("noticePeriod", notice, { noticeDays: 60 }), 3);
+  assert.equal(M.chooseOption("noticePeriod", notice, { noticeDays: 0 }), 0);
+  assert.equal(M.chooseOption("noticePeriod", ["1 month", "2 months", "3 months"], { noticeDays: 60 }), 1);
+  assert.equal(M.chooseOption("noticePeriod", notice, { noticeDays: 180 }), -1, "nothing close is left to the user");
+  assert.equal(M.chooseOption("noticePeriod", notice, { noticeDays: null }), -1, "never guessed");
+
+  const roles = ["Web App Developer", "UI/UX Developer", "Android Application Developer", "IOS Application Developer"];
+  assert.equal(M.chooseOption("position", roles, { title: "Android Application Developer" }), 2);
+  assert.equal(M.chooseOption("position", roles, { title: "Data Engineer" }), -1);
+});

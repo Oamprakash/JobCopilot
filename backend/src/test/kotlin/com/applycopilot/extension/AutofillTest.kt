@@ -26,6 +26,9 @@ class AutofillTest {
         assertEquals("https://oam.dev", f.website)
         assertEquals("Lead Android Developer", f.currentTitle)
         assertEquals("Movate", f.currentCompany)
+        assertEquals(null, f.noticePeriodDays, "notice period only comes from preferences")
+        assertEquals(60, Autofill.profileFields(p, "oam@example.com", com.applycopilot.core.Preferences(noticePeriodDays = 60)).noticePeriodDays)
+        assertEquals(listOf("Kotlin", "Compose"), Autofill.profileFields(Profile(skills = listOf(" Kotlin", "Compose", "kotlin")), "x@y.z").skills)
 
         val bare = Autofill.profileFields(Profile(fullName = "Cher"), "c@example.com")
         assertEquals("Cher", bare.firstName)

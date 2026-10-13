@@ -1,5 +1,6 @@
 package com.applycopilot.extension
 
+import com.applycopilot.core.Preferences
 import com.applycopilot.core.Profile
 import kotlinx.serialization.Serializable
 
@@ -18,10 +19,14 @@ data class AutofillProfile(
     val currentTitle: String?,
     val currentCompany: String?,
     val totalExperienceYears: Double?,
+    /** The profile's skills, in the order the profile lists them (an application's tailored order replaces this). */
+    val skills: List<String> = emptyList(),
+    /** Only from the user's own preferences; never guessed. */
+    val noticePeriodDays: Int? = null,
 )
 
 object Autofill {
-    fun profileFields(profile: Profile, accountEmail: String): AutofillProfile {
+    fun profileFields(profile: Profile, accountEmail: String, prefs: Preferences? = null): AutofillProfile {
         val name = profile.fullName.trim().replace(Regex("\\s+"), " ")
         val parts = name.split(' ').filter { it.isNotEmpty() }
         val links = profile.links.map { it.trim() }.filter { it.isNotEmpty() }
@@ -43,6 +48,8 @@ object Autofill {
             currentTitle = current?.title?.takeIf { it.isNotBlank() },
             currentCompany = current?.company?.takeIf { it.isNotBlank() },
             totalExperienceYears = profile.totalExperienceYears,
+            skills = profile.skills.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() },
+            noticePeriodDays = prefs?.noticePeriodDays,
         )
     }
 

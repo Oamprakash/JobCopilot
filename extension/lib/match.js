@@ -29,6 +29,7 @@ var JobCopilotMatch = (function () {
     ["lastName", /\b(last|family|sur) ?name\b|\bsurname\b|\blname\b/],
     ["currentCompany", /\b(current|present|latest|most recent) (company|employer|organi[sz]ation)\b|\bcompany name\b|^org$|\bemployer\b/],
     ["currentTitle", /\b(current|present|latest|most recent) (job )?(title|role|position|designation)\b|^job title$|^title$/],
+    ["skills", /\b(key |technical |primary |core |top )?skills?( set)?\b|\btech(nology)? stack\b|\btechnologies\b|\bareas of expertise\b/],
     ["location", /\b(location|current city|city|where are you (based|located)|town)\b/],
     ["fullName", /\b(full|legal|your) name\b|^name$|\bsystemfield name\b|^candidate name$/],
   ];
@@ -82,7 +83,74 @@ var JobCopilotMatch = (function () {
     return bestScore >= min ? best : null;
   }
 
-  return { words: words, classify: classify, isResumeUpload: isResumeUpload, similarity: similarity, pickAnswer: pickAnswer };
+  /** A dropdown the extension may answer from the profile: years of experience, notice period, or the role applied for. */
+  function classifySelect(hints) {
+    var w = words(hints);
+    if (/\bnotice\b/.test(w)) return "noticePeriod";
+    if (/\b(years?|yrs) of (total |relevant |work )?experience\b|\b(total|overall|relevant|work) experience\b|^experience$|\bexperience (in )?years\b/.test(w)) return "experienceYears";
+    if (/\b(position|role|job) (applying|applied) for\b|\bapplying for\b|^position$|^role$/.test(w)) return "position";
+    return null;
+  }
+
+  /** "3-5 Years" → [3, 5], "10+ Years" → [10, Infinity], "Less than 1 year" → [0, 1], "Fresher" → [0, 0]. */
+  function yearsRange(label) {
+    // The raw label, not words(): words() turns "3-5" into "3 5".
+    var w = String(label || "").toLowerCase().replace(/\s+/g, " ").trim();
+    var m;
+    if (/\bfresher\b|\bno experience\b/.test(w)) return [0, 0];
+    if ((m = w.match(/(?:less than|under|below|upto|up to) (\d+(?:\.\d+)?)/))) return [0, parseFloat(m[1])];
+    if ((m = w.match(/(\d+(?:\.\d+)?) ?(?:to|-|–) ?(\d+(?:\.\d+)?)/))) return [parseFloat(m[1]), parseFloat(m[2])];
+    if ((m = w.match(/(\d+(?:\.\d+)?) ?(?:\+|plus|or more|and above|above)/)) || (m = String(label).match(/(\d+(?:\.\d+)?)\s*\+/))) return [parseFloat(m[1]), Infinity];
+    if ((m = w.match(/^(\d+(?:\.\d+)?) (years?|yrs)$/))) return [parseFloat(m[1]), parseFloat(m[1])];
+    return null;
+  }
+
+  /** "Immediately available" → 0, "30 Days" → 30, "2 months" → 60, "1 week" → 7. */
+  function noticeDays(label) {
+    var w = words(label);
+    var m;
+    if (/\bimmediate(ly)?\b|\bno notice\b|\bserving\b/.test(w)) return 0;
+    if ((m = w.match(/(\d+) ?(days?)/))) return parseInt(m[1], 10);
+    if ((m = w.match(/(\d+) ?(weeks?)/))) return parseInt(m[1], 10) * 7;
+    if ((m = w.match(/(\d+) ?(months?)/))) return parseInt(m[1], 10) * 30;
+    return null;
+  }
+
+  /**
+   * The index of the option to choose for a classified dropdown, or -1 to leave it for the user.
+   * `options` are the visible option labels (placeholders like "Select…" are skipped).
+   */
+  function chooseOption(kind, options, facts) {
+    var best = -1;
+    if (kind === "experienceYears" && facts.years != null) {
+      // Of the ranges that contain the user's years, the one with the highest lower bound ("10+" over "5+").
+      var bestLow = -1;
+      options.forEach(function (o, i) {
+        var r = yearsRange(o);
+        if (r && facts.years >= r[0] && facts.years <= r[1] + 0.999 && r[0] > bestLow) { best = i; bestLow = r[0]; }
+      });
+    } else if (kind === "noticePeriod" && facts.noticeDays != null) {
+      var bestGap = Infinity;
+      options.forEach(function (o, i) {
+        var d = noticeDays(o);
+        if (d != null && Math.abs(d - facts.noticeDays) < bestGap) { best = i; bestGap = Math.abs(d - facts.noticeDays); }
+      });
+      if (bestGap > 15) best = -1; // nothing close: leave it to the user
+    } else if (kind === "position" && facts.title) {
+      var bestScore = 0;
+      options.forEach(function (o, i) {
+        var s = similarity(o, facts.title);
+        if (s > bestScore) { best = i; bestScore = s; }
+      });
+      if (bestScore < 0.5) best = -1;
+    }
+    return best;
+  }
+
+  return {
+    words: words, classify: classify, classifySelect: classifySelect, isResumeUpload: isResumeUpload,
+    similarity: similarity, pickAnswer: pickAnswer, yearsRange: yearsRange, noticeDays: noticeDays, chooseOption: chooseOption,
+  };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = JobCopilotMatch;
