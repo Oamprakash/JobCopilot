@@ -18,6 +18,7 @@ import com.applycopilot.tailoring.claude.ClaudeTailor
 import com.applycopilot.resume.ResumeParsingService
 import com.applycopilot.storage.FileStorage
 import com.applycopilot.storage.LocalFileStorage
+import com.applycopilot.storage.ObjectFileStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
@@ -48,7 +49,7 @@ class Deps(
             return Deps(
                 config = config,
                 db = db,
-                storage = LocalFileStorage(config.storageDir),
+                storage = config.objectStorage?.let { ObjectFileStorage(it) } ?: LocalFileStorage(config.storageDir),
                 mailer = config.mail?.let { ResendMailer(http, it) } ?: ConsoleMailer(),
                 jwt = JwtService(config.jwtSecret),
                 parsing = ResumeParsingService(claude),

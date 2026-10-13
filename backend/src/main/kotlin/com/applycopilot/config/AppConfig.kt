@@ -2,7 +2,10 @@ package com.applycopilot.config
 
 import com.applycopilot.jobs.AdzunaConfig
 
-data class MailConfig(val resendApiKey: String, val from: String)
+/** An S3-compatible bucket for uploaded files, e.g. Cloudflare R2 (endpoint https://<account>.r2.cloudflarestorage.com). */
+data class ObjectStorageConfig(val endpoint: String, val bucket: String, val accessKeyId: String, val secretAccessKey: String, val region: String = "auto")
+
+data class MailConfig(val resendApiKey: String, val from: String, val appName: String = "Apply Copilot")
 
 data class AppConfig(
     /** "dev", "test" or "prod". Outside prod, magic links are logged and returned in the API response. */
@@ -34,6 +37,10 @@ data class AppConfig(
     val publicPreview: Boolean = false,
     /** With [publicPreview]: who besides admins may sign in. Empty means anyone. */
     val inviteEmails: Set<String> = emptySet(),
+    /** When set, uploaded files go to this bucket instead of [storageDir]. */
+    val objectStorage: ObjectStorageConfig? = null,
+    /** The product's name in emails and messages (APP_NAME). */
+    val appName: String = "Apply Copilot",
     /** Activity events (admin dashboard) are kept this many days. */
     val eventRetentionDays: Int = 180,
     /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
@@ -51,8 +58,9 @@ data class AppConfig(
             }
             require(jwtSecret.length >= 32) { "JWT_SECRET must be at least 32 characters" }
 
+            val appName = env["APP_NAME"]?.trim()?.takeIf { it.isNotEmpty() } ?: "Apply Copilot"
             val mail = env["RESEND_API_KEY"]?.takeIf { it.isNotBlank() }?.let {
-                MailConfig(resendApiKey = it, from = env["MAIL_FROM"] ?: "Apply Copilot <login@example.com>")
+                MailConfig(resendApiKey = it, from = env["MAIL_FROM"] ?: "$appName <login@example.com>", appName = appName)
             }
             if (appEnv == "prod") requireNotNull(mail) { "RESEND_API_KEY is required in prod so magic links can be emailed" }
 
@@ -78,6 +86,8 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                appName = appName,
+                objectStorage = objectStorage(env),
                 publicPreview = env["PUBLIC_PREVIEW"]?.toBoolean() ?: false,
                 inviteEmails = env["INVITE_EMAILS"].orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet(),
                 eventRetentionDays = (env["EVENT_RETENTION_DAYS"]?.toInt() ?: 180).coerceAtLeast(1),
@@ -107,6 +117,19 @@ data class AppConfig(
                 env["DATABASE_USER"] ?: "applycopilot",
                 env["DATABASE_PASSWORD"] ?: "applycopilot",
             )
+        }
+
+        /** R2: R2_ACCOUNT_ID (or R2_ENDPOINT), R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY. All or nothing. */
+        private fun objectStorage(env: Map<String, String>): ObjectStorageConfig? {
+            fun v(k: String) = env[k]?.trim()?.takeIf { it.isNotEmpty() }
+            val endpoint = v("R2_ENDPOINT") ?: v("R2_ACCOUNT_ID")?.let { "https://$it.r2.cloudflarestorage.com" }
+            val bucket = v("R2_BUCKET")
+            val key = v("R2_ACCESS_KEY_ID")
+            val secret = v("R2_SECRET_ACCESS_KEY")
+            val given = listOf(endpoint, bucket, key, secret)
+            if (given.all { it == null }) return null
+            require(given.none { it == null }) { "R2 storage needs R2_ACCOUNT_ID (or R2_ENDPOINT), R2_BUCKET, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY" }
+            return ObjectStorageConfig(endpoint!!.trimEnd('/'), bucket!!, key!!, secret!!, v("R2_REGION") ?: "auto")
         }
 
         private fun adzunaConfig(env: Map<String, String>): AdzunaConfig? {

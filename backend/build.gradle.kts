@@ -46,6 +46,13 @@ dependencies {
 
     // Resume text extraction
     implementation("org.apache.pdfbox:pdfbox:3.0.3")
+
+    // Resume files in Cloudflare R2 (S3-compatible). 2.28.x: later SDKs send checksum headers R2 rejects by default.
+    implementation("software.amazon.awssdk:s3:2.28.29") {
+        exclude(group = "software.amazon.awssdk", module = "netty-nio-client")
+        exclude(group = "software.amazon.awssdk", module = "apache-client")
+    }
+    implementation("software.amazon.awssdk:url-connection-client:2.28.29")
     implementation("org.apache.poi:poi-ooxml:5.3.0")
 
     implementation("ch.qos.logback:logback-classic:1.5.12")
@@ -54,6 +61,7 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
     testImplementation("org.testcontainers:postgresql:1.20.4")
+    testImplementation("org.testcontainers:minio:1.20.4")
 }
 
 tasks.test {

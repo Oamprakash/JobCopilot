@@ -96,7 +96,7 @@ fun Application.module(deps: Deps) {
     routing {
         // Opening the API port in a browser lands here; the app itself is the web server on WEB_BASE_URL.
         get("/") {
-            call.respond(RootResponse("Apply Copilot API is running. Open the app at ${deps.config.webBaseUrl}", deps.config.webBaseUrl))
+            call.respond(RootResponse("${deps.config.appName} API is running. Open the app at ${deps.config.webBaseUrl}", deps.config.webBaseUrl))
         }
         get("/health") {
             deps.db.tx { c -> c.prepareStatement("SELECT 1").use { it.executeQuery().use { rs -> rs.next() } } }

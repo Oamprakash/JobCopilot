@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
-/** Where uploaded resumes live. Local disk for v1; an S3-compatible (R2) implementation slots in here later. */
+/** Where uploaded resumes live: local disk, or an S3-compatible bucket such as Cloudflare R2 ([ObjectFileStorage]). */
 interface FileStorage {
     fun put(key: String, bytes: ByteArray)
     fun get(key: String): ByteArray?

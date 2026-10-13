@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Apply Copilot</title>
+  <title>Job application helper</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <header>
     <img src="icons/48.png" alt="" width="24" height="24" />
-    <strong>Apply Copilot</strong>
+    <strong data-app-name></strong>
     <span id="who" class="muted"></span>
   </header>
 
   <section id="connect" hidden>
-    <p class="muted">Connect to your Apply Copilot account. In the app, open <b>Profile → Browser extension</b> and get a code.</p>
+    <p class="muted">Connect to your <span data-app-name></span> account. In the app, open <b>Profile → Browser extension</b> and get a code.</p>
     <label>App address
       <input id="baseUrl" type="url" placeholder="https://jobcopilot.onrender.com" autocomplete="off" />
     </label>

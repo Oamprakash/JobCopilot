@@ -55,11 +55,11 @@ class ResendMailer(private val http: HttpClient, private val config: MailConfig)
         val body = buildJsonObject {
             put("from", config.from)
             putJsonArray("to") { add(email) }
-            put("subject", "Your Apply Copilot sign-in link")
-            put("text", "Sign in to Apply Copilot:\n\n$link\n\nThe link works once and expires in 15 minutes. If you didn't ask for it, ignore this email.")
+            put("subject", "Your ${config.appName} sign-in link")
+            put("text", "Sign in to ${config.appName}:\n\n$link\n\nThe link works once and expires in 15 minutes. If you didn't ask for it, ignore this email.")
             put(
                 "html",
-                """<p>Sign in to Apply Copilot:</p><p><a href="$link">Sign in</a></p>""" +
+                """<p>Sign in to ${config.appName}:</p><p><a href="$link">Sign in</a></p>""" +
                     "<p>The link works once and expires in 15 minutes. If you didn't ask for it, ignore this email.</p>",
             )
         }

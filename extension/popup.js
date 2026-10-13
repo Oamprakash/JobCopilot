@@ -1,6 +1,9 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+const APP_NAME = chrome.runtime.getManifest().name;
+document.title = APP_NAME;
+document.querySelectorAll("[data-app-name]").forEach((el) => { el.textContent = APP_NAME; });
 let tab = null;
 let data = null; // autofill data for the current page
 let savedJobId = null;
@@ -34,7 +37,7 @@ function normalizeBase(raw) {
   if (!/^https?:\/\//.test(url)) url = "https://" + url;
   const parsed = new URL(url);
   const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-  if (parsed.protocol !== "https:" && !local) throw new Error("Use the https:// address of your Apply Copilot app.");
+  if (parsed.protocol !== "https:" && !local) throw new Error("Use the https:// address of your " + APP_NAME + " app.");
   return parsed.origin;
 }
 

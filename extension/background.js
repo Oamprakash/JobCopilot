@@ -10,7 +10,7 @@ async function settings() {
 
 async function api(path, options = {}) {
   const { baseUrl, token } = await settings();
-  if (!baseUrl) throw new Error("Connect the extension to your Apply Copilot account first.");
+  if (!baseUrl) throw new Error("Connect the extension to your " + chrome.runtime.getManifest().name + " account first.");
   const headers = Object.assign({}, options.headers || {});
   if (token) headers.Authorization = "Bearer " + token;
   if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";

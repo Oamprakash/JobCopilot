@@ -91,7 +91,7 @@ data class StageResponse(val jobId: String, val stage: String)
 private suspend fun ApplicationCall.extensionUserId(deps: Deps): UUID {
     val header = request.headers[HttpHeaders.Authorization].orEmpty()
     val token = header.removePrefix("Bearer ").trim().takeIf { header.startsWith("Bearer ") && it.length in 20..100 }
-        ?: throw ApiException(HttpStatusCode.Unauthorized, "Connect the extension from your Apply Copilot profile")
+        ?: throw ApiException(HttpStatusCode.Unauthorized, "Connect the extension from your profile in the app")
     return deps.db.tx { c -> ExtensionAuth.userFor(c, token) }
         ?: throw ApiException(HttpStatusCode.Unauthorized, "This extension was disconnected. Connect it again from your profile.")
 }
@@ -159,7 +159,7 @@ fun Route.extensionRoutes(deps: Deps) {
             val askedJob = call.request.queryParameters["jobId"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val response = deps.db.tx { c ->
                 val user = Users.find(c, userId) ?: throw ApiException(HttpStatusCode.Unauthorized, "Account not found")
-                val profile = Profiles.latest(c, userId)?.profile ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile in Apply Copilot first")
+                val profile = Profiles.latest(c, userId)?.profile ?: throw ApiException(HttpStatusCode.Conflict, "Save your profile in the app first")
                 val recent = Applications.recent(c, userId)
                 val match = askedJob?.let { id -> recent.firstOrNull { it.jobId == id } }
                     ?: recent.firstOrNull { pageUrl.isNotEmpty() && JobUrls.sameJob(it.applyUrl, pageUrl) }

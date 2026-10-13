@@ -27,4 +27,14 @@ class AppConfigTest {
         assertEquals("http://localhost:3000", AppConfig.fromEnv(base).webBaseUrl)
         assertEquals(9090, AppConfig.fromEnv(base + mapOf("PORT" to "10000", "API_PORT" to "9090")).port)
     }
+
+    @Test
+    fun r2SettingsAreAllOrNothing() {
+        val base = mapOf("APP_ENV" to "test")
+        kotlin.test.assertNull(AppConfig.fromEnv(base).objectStorage)
+        val r2 = AppConfig.fromEnv(base + mapOf("R2_ACCOUNT_ID" to "abc123", "R2_BUCKET" to "resumes", "R2_ACCESS_KEY_ID" to "k", "R2_SECRET_ACCESS_KEY" to "s")).objectStorage!!
+        assertEquals("https://abc123.r2.cloudflarestorage.com", r2.endpoint)
+        assertEquals("auto", r2.region)
+        kotlin.test.assertFailsWith<IllegalArgumentException> { AppConfig.fromEnv(base + mapOf("R2_BUCKET" to "resumes")) }
+    }
 }

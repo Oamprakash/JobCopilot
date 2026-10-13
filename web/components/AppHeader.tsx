@@ -1,5 +1,6 @@
 "use client";
 
+import { brand } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -27,7 +28,7 @@ export function AppHeader({ email, isAdmin }: { email?: string; isAdmin?: boolea
       <div className="header-inner">
         <Link href="/" className="brand">
           <Logo />
-          Apply Copilot
+          {brand.name}
         </Link>
         <nav className="header-nav" aria-label="Main">
           <Link href="/feed" className="nav-link" aria-current={pathname === "/feed" ? "page" : undefined}>

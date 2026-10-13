@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { brand } from "@/lib/brand";
 import { useState, type FormEvent } from "react";
 import { Logo } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
@@ -30,7 +32,7 @@ export default function LoginPage() {
   return (
     <main className="narrow stack" style={{ gap: 24 }}>
       <div className="row" style={{ gap: 10, fontWeight: 700, fontSize: 18 }}>
-        <Logo /> Apply Copilot
+        <Logo /> {brand.name}
       </div>
 
       {sentTo ? (
@@ -70,8 +72,9 @@ export default function LoginPage() {
             {busy ? "Sending…" : "Email me a sign-in link"}
           </button>
           <p className="hint" style={{ margin: 0 }}>
-            We keep a record of how you use Apply Copilot (searches, jobs you open, applications you prepare) to run and
-            improve it. Deleting your account from your profile erases it.
+            By signing in you agree to the <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>. We keep a
+            record of how you use {brand.name} (searches, jobs you open, applications you prepare) to run and improve it; deleting your
+            account from your profile erases it.
           </p>
         </form>
       )}

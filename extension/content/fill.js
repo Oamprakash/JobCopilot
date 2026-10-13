@@ -142,7 +142,7 @@
     });
 
     if (filled > 0) {
-      toast("Apply Copilot filled " + filled + " field" + (filled === 1 ? "" : "s") + (resumeAttached ? ", including your resume" : "") +
+      toast(chrome.runtime.getManifest().name + " filled " + filled + " field" + (filled === 1 ? "" : "s") + (resumeAttached ? ", including your resume" : "") +
         ". Check each one, answer the rest, then click Submit yourself.");
     }
     return { filled: filled, resumeAttached: resumeAttached, skipped: skipped, frame: location.host };
