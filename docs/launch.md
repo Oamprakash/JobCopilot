@@ -55,7 +55,7 @@ Render's free Postgres expires 30 days after creation. Choose one:
    ```
    Use a `postgres` image version at least as new as Render's database (shown on its page).
 4. Render → service → Environment: replace `DATABASE_URL` with the Neon URL. In `render.yaml`, change the `DATABASE_URL` entry from `fromDatabase` to `sync: false` so a Blueprint sync doesn't point it back at Render.
-5. Delete `jobcopilot-dump` files from your computer afterwards: they contain users' data.
+5. Delete `jobcopilot.dump` from your computer afterwards: it contains users' data.
 
 **Check:** sign in on the live site; your profile, tracker and admin dashboard data are all there.
 
