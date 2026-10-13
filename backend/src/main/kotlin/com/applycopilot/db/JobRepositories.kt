@@ -298,8 +298,8 @@ object Matches {
     fun tabCounts(c: Connection, userId: UUID, newMinScore: Int, cap: Int = 100): Map<String, Int> =
         c.prepareStatement(
             """
-            SELECT m.status, count(*) FROM matches m JOIN jobs j ON j.id = m.job_id
-            WHERE m.user_id = ? AND (m.status <> 'new' OR (j.closed_at IS NULL AND m.score >= ?))
+            SELECT m.status, count(*) FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
+            WHERE m.user_id = ? AND (m.status <> 'new' OR (j.closed_at IS NULL AND co.active AND m.score >= ?))
             GROUP BY m.status
             """.trimIndent(),
         ).use { st ->
@@ -316,8 +316,8 @@ object Matches {
     fun countNewBelow(c: Connection, userId: UUID, minScore: Int): Int =
         c.prepareStatement(
             """
-            SELECT count(*) FROM matches m JOIN jobs j ON j.id = m.job_id
-            WHERE m.user_id = ? AND m.status = 'new' AND m.score < ? AND j.closed_at IS NULL
+            SELECT count(*) FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
+            WHERE m.user_id = ? AND m.status = 'new' AND m.score < ? AND j.closed_at IS NULL AND co.active
             """.trimIndent(),
         ).use { st ->
             st.setObject(1, userId)
@@ -332,7 +332,7 @@ object Matches {
                    m.score, m.reasons, m.missing_skills, m.scorer, m.status, j.source, j.description_partial, j.visa, j.relocation
             FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
             WHERE m.user_id = ? AND m.status = ? AND m.score >= ?
-              AND (m.status <> 'new' OR j.closed_at IS NULL)
+              AND (m.status <> 'new' OR (j.closed_at IS NULL AND co.active))
             ORDER BY m.score DESC, j.posted_at DESC NULLS LAST
             LIMIT ?
             """.trimIndent(),

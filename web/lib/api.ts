@@ -102,6 +102,16 @@ export type AdminOverview = {
   topLocations: Counted[];
   topAppliedCompanies: Counted[];
 };
+/** Adzuna job search as admins control it. configured: API keys set on the server; enabled: switched on. */
+export type AdzunaStatus = {
+  configured: boolean;
+  enabled: boolean;
+  callsToday: number;
+  dailyLimit: number;
+  openJobs: number;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+};
 export type AdminUser = {
   id: string;
   email: string;
@@ -354,6 +364,8 @@ export const api = {
   adminUsers: (q: string, offset = 0) =>
     request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
+  adzunaStatus: () => request<AdzunaStatus>("/admin/sources/adzuna"),
+  setAdzuna: (enabled: boolean) => request<AdzunaStatus>("/admin/sources/adzuna", { method: "PUT", body: json({ enabled }) }),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>

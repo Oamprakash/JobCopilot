@@ -30,7 +30,7 @@ object Digests {
     fun newMatches(c: Connection, userId: UUID, since: Instant, minScore: Int, limit: Int): Pair<List<DigestJob>, Int> {
         val where = """
             FROM matches m JOIN jobs j ON j.id = m.job_id JOIN companies co ON co.id = j.company_id
-            WHERE m.user_id = ? AND m.status = 'new' AND m.score >= ? AND m.scored_at > ? AND j.closed_at IS NULL
+            WHERE m.user_id = ? AND m.status = 'new' AND m.score >= ? AND m.scored_at > ? AND j.closed_at IS NULL AND co.active
         """
         val total = c.prepareStatement("SELECT count(*) $where").use { st ->
             st.setObject(1, userId)

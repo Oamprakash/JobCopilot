@@ -13,6 +13,7 @@ import com.applycopilot.db.Matches
 import com.applycopilot.db.Users
 import com.applycopilot.jobs.Ats
 import com.applycopilot.jobs.AtsClient
+import com.applycopilot.jobs.IngestionService
 import com.applycopilot.jobs.SyncResult
 import com.applycopilot.matching.Suggestion
 import io.ktor.http.HttpStatusCode
@@ -128,6 +129,24 @@ data class AddCompanyRequest(val name: String, val ats: String, val boardToken: 
 
 @Serializable
 data class ActiveRequest(val active: Boolean)
+
+/**
+ * The Adzuna job search as admins see it. [configured]: the API keys are set on the server.
+ * [enabled]: admins have it switched on. Off means no Adzuna calls, and its jobs stop appearing as new matches.
+ */
+@Serializable
+data class AdzunaStatusDto(
+    val configured: Boolean,
+    val enabled: Boolean,
+    val callsToday: Int,
+    val dailyLimit: Int,
+    val openJobs: Int,
+    val lastSyncedAt: String?,
+    val lastError: String?,
+)
+
+@Serializable
+data class EnabledRequest(val enabled: Boolean)
 
 @Serializable
 data class SyncResultDto(val company: CompanyDto, val fetched: Int, val inserted: Int, val closed: Int, val error: String?)
@@ -304,6 +323,29 @@ fun Route.adminRoutes(deps: Deps) {
             call.respond(OkResponse())
         }
 
+        get("/sources/adzuna") {
+            call.requireAdmin(deps)
+            call.respond(deps.adzunaStatus())
+        }
+
+        put("/sources/adzuna") {
+            call.requireSameOrigin(deps.config)
+            call.requireAdmin(deps)
+            val enabled = call.receive<EnabledRequest>().enabled
+            if (enabled && deps.config.adzuna == null) {
+                throw ApiException(HttpStatusCode.Conflict, "Set ADZUNA_APP_ID and ADZUNA_APP_KEY on the server first")
+            }
+            deps.db.tx { c ->
+                val row = Companies.all(c).firstOrNull { it.ats == IngestionService.ADZUNA }
+                    ?: Companies.insert(c, "Adzuna", IngestionService.ADZUNA, "in")
+                    ?: error("Adzuna source row missing")
+                Companies.setActive(c, row.id, enabled)
+            }
+            deps.autocomplete.invalidate()
+            LoggerFactory.getLogger("Admin").info("Admin {} switched Adzuna {}", call.userId(), if (enabled) "on" else "off")
+            call.respond(deps.adzunaStatus())
+        }
+
         post("/ingest") {
             call.requireSameOrigin(deps.config)
             call.requireAdmin(deps)
@@ -312,4 +354,17 @@ fun Route.adminRoutes(deps: Deps) {
             call.respond(results.map { it.toDto() })
         }
     }
+}
+
+private suspend fun Deps.adzunaStatus(): AdzunaStatusDto = db.tx { c ->
+    val row = Companies.all(c).firstOrNull { it.ats == IngestionService.ADZUNA }
+    AdzunaStatusDto(
+        configured = config.adzuna != null,
+        enabled = row?.active == true && config.adzuna != null,
+        callsToday = com.applycopilot.db.AggregatorQueries.callsToday(c, IngestionService.ADZUNA),
+        dailyLimit = config.adzuna?.dailyCalls ?: 0,
+        openJobs = row?.openJobs ?: 0,
+        lastSyncedAt = row?.lastSyncedAt?.toString(),
+        lastError = row?.lastError,
+    )
 }

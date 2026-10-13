@@ -6,6 +6,8 @@ import com.applycopilot.api.AdminUserDetailDto
 import com.applycopilot.api.AdminUsersResponse
 import com.applycopilot.api.ClientEventRequest
 import com.applycopilot.api.CountedValueDto
+import com.applycopilot.api.AdzunaStatusDto
+import com.applycopilot.api.EnabledRequest
 import com.applycopilot.api.FeedResponse
 import com.applycopilot.api.JobDetailDto
 import com.applycopilot.api.MagicLinkRequest
@@ -340,6 +342,31 @@ class FeedApiTest {
         val adzunaResult = deps.ingestion.syncAll().single { it.company.ats == "adzuna" }
         assertEquals(null, adzunaResult.error)
         assertEquals(3, adzunaCalls.size)
+
+        // Admins can switch Adzuna off: no more calls, and its jobs leave New (saved ones stay saved).
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        assertEquals(HttpStatusCode.Forbidden, client.get("/admin/sources/adzuna").status)
+        val on = admin.get("/admin/sources/adzuna").body<AdzunaStatusDto>()
+        assertTrue(on.configured && on.enabled)
+        assertEquals(3, on.callsToday)
+        assertEquals(3, on.dailyLimit)
+        val off = admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(false)) }.body<AdzunaStatusDto>()
+        assertFalse(off.enabled)
+        assertFalse(client.feed().jobs.any { it.source == "adzuna" })
+        assertFalse(client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.any { it.source == "adzuna" })
+        deps.ingestion.syncAll()
+        assertEquals(3, adzunaCalls.size, "no Adzuna calls while it's off")
+        admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(true)) }
+        assertTrue(client.get("/feed?status=new&weak=true").body<FeedResponse>().jobs.any { it.company == "Flipkart" })
+    }
+
+    @Test
+    fun adzunaCantBeSwitchedOnWithoutKeys() = withApp { _ ->
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        val status = admin.get("/admin/sources/adzuna").body<AdzunaStatusDto>()
+        assertFalse(status.configured)
+        assertFalse(status.enabled)
+        assertEquals(HttpStatusCode.Conflict, admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(true)) }.status)
     }
 
     @Test

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, type AdminOverview, type AdminUser, type Counted } from "@/lib/api";
+import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted } from "@/lib/api";
 import { ago, eventLabels, funnelLabels } from "@/lib/adminFormat";
 import { useMe } from "@/lib/useMe";
 
@@ -97,9 +97,69 @@ export default function AdminPage() {
           </>
         )}
 
+        {me?.isAdmin && <JobSources />}
         {me?.isAdmin && <UsersTable />}
       </main>
     </>
+  );
+}
+
+/** The Adzuna switch: off means no Adzuna calls, and its jobs stop showing as new matches and in daily emails. */
+function JobSources() {
+  const [status, setStatus] = useState<AdzunaStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    api.adzunaStatus().then(setStatus).catch(setError);
+  }, []);
+
+  async function toggle(enabled: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      setStatus(await api.setAdzuna(enabled));
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack" style={{ gap: 12 }}>
+      <h2>Job sources</h2>
+      <Problems error={error} />
+      {!status ? (
+        <p className="muted small" style={{ margin: 0 }}>Loading…</p>
+      ) : (
+        <div className="source-row">
+          <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+            <strong>Adzuna job search</strong>
+            <span className="muted small">
+              {!status.configured
+                ? "Add ADZUNA_APP_ID and ADZUNA_APP_KEY on Render to use it."
+                : status.enabled
+                  ? `On · ${status.openJobs.toLocaleString()} open jobs · ${status.callsToday} of ${status.dailyLimit} searches used today${status.lastSyncedAt ? ` · last search ${ago(status.lastSyncedAt)}` : ""}`
+                  : "Off · no Adzuna searches; its jobs are hidden from new matches and daily emails. Saved jobs stay saved."}
+            </span>
+            {status.enabled && status.lastError && <span className="small" style={{ color: "var(--bad)" }}>Last error: {status.lastError}</span>}
+          </div>
+          <label className="switch">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={status.enabled}
+              disabled={busy || !status.configured}
+              onChange={(e) => toggle(e.target.checked)}
+              aria-label="Adzuna job search"
+            />
+            <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
+          </label>
+        </div>
+      )}
+      <p className="muted small" style={{ margin: 0 }}>Company job boards (Greenhouse, Lever, Ashby) aren&apos;t affected by this switch.</p>
+    </section>
   );
 }
 
