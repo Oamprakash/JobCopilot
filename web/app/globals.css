@@ -325,3 +325,7 @@ details.notice summary::marker { color: var(--warn); }
   .dropzone { padding: 28px 16px; }
   .site-footer { gap: 12px 16px; }
 }
+
+.entry-tools { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.icon-btn { min-width: 40px; padding-inline: 8px; font-size: 16px; }
+.icon-btn:disabled { opacity: 0.3; }

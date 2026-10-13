@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Education, Experience, Profile } from "@/lib/api";
 import { ChipInput } from "./ChipInput";
 import { NumberField } from "./NumberField";
@@ -17,6 +18,35 @@ export function ProfileEditor({ value, onChange }: Props) {
     set("experience", value.experience.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   const setEducation = (i: number, patch: Partial<Education>) =>
     set("education", value.education.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+
+  // Roles are kept latest first: resumes, cover letters and matching all read the list in that order.
+  // A new role goes on top, gets focus and is scrolled to, so it can't end up unnoticed at the bottom.
+  const rolesRef = useRef<HTMLDivElement>(null);
+  const educationRef = useRef<HTMLDivElement>(null);
+  const [focusNew, setFocusNew] = useState<"role" | "education" | null>(null);
+  useEffect(() => {
+    if (!focusNew) return;
+    const first = (focusNew === "role" ? rolesRef : educationRef).current?.querySelector<HTMLInputElement>(".entry input");
+    first?.focus({ preventScroll: true });
+    first?.closest(".entry")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFocusNew(null);
+  }, [focusNew]);
+
+  function addRole() {
+    set("experience", [{ ...emptyExperience }, ...value.experience]);
+    setFocusNew("role");
+  }
+  function addEducation() {
+    set("education", [{ ...emptyEducation }, ...value.education]);
+    setFocusNew("education");
+  }
+  function move<T>(list: T[], i: number, by: -1 | 1): T[] {
+    const j = i + by;
+    if (j < 0 || j >= list.length) return list;
+    const next = [...list];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  }
 
   return (
     <div className="stack" style={{ gap: 24 }}>
@@ -38,23 +68,31 @@ export function ProfileEditor({ value, onChange }: Props) {
       <section className="stack">
         <div className="entry-head">
           <h2>Experience</h2>
-          <button type="button" className="btn btn-ghost" onClick={() => set("experience", [...value.experience, { ...emptyExperience }])}>
+          <button type="button" className="btn btn-ghost" onClick={addRole}>
             + Add role
           </button>
         </div>
+        <p className="hint" style={{ margin: "-8px 0 0" }}>Latest role first. New roles are added at the top; use ↑ ↓ to reorder.</p>
         {value.experience.length === 0 && <p className="muted small">No roles yet. Add your current and past roles.</p>}
+        <div className="stack" ref={rolesRef}>
         {value.experience.map((e, i) => (
           <div className="entry" key={i}>
             <div className="entry-head">
-              <strong>{e.title || e.company ? `${e.title || "Role"} · ${e.company || "Company"}` : `Role ${i + 1}`}</strong>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                aria-label={`Remove role ${i + 1}`}
-                onClick={() => set("experience", value.experience.filter((_, j) => j !== i))}
-              >
-                Remove
-              </button>
+              <strong>{e.title || e.company ? `${e.title || "Role"} · ${e.company || "Company"}` : "New role"}</strong>
+              <div className="entry-tools">
+                <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move role ${i + 1} up`} disabled={i === 0}
+                  onClick={() => set("experience", move(value.experience, i, -1))}>↑</button>
+                <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move role ${i + 1} down`} disabled={i === value.experience.length - 1}
+                  onClick={() => set("experience", move(value.experience, i, 1))}>↓</button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  aria-label={`Remove role ${i + 1}`}
+                  onClick={() => set("experience", value.experience.filter((_, j) => j !== i))}
+                >
+                  Remove
+                </button>
+              </div>
             </div>
             <div className="grid-2">
               <TextField label="Title" value={e.title} onChange={(v) => setExperience(i, { title: v })} required />
@@ -84,15 +122,17 @@ export function ProfileEditor({ value, onChange }: Props) {
             </label>
           </div>
         ))}
+        </div>
       </section>
 
       <section className="stack">
         <div className="entry-head">
           <h2>Education</h2>
-          <button type="button" className="btn btn-ghost" onClick={() => set("education", [...value.education, { ...emptyEducation }])}>
+          <button type="button" className="btn btn-ghost" onClick={addEducation}>
             + Add education
           </button>
         </div>
+        <div className="stack" ref={educationRef}>
         {value.education.map((ed, i) => (
           <div className="entry" key={i}>
             <div className="grid-2">
@@ -101,13 +141,18 @@ export function ProfileEditor({ value, onChange }: Props) {
               <TextField label="Field" value={ed.field ?? ""} onChange={(v) => setEducation(i, { field: v || null })} />
               <NumberField label="Year completed" integer value={ed.endYear} onChange={(v) => setEducation(i, { endYear: v })} />
             </div>
-            <div>
+            <div className="entry-tools">
+              <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} up`} disabled={i === 0}
+                onClick={() => set("education", move(value.education, i, -1))}>↑</button>
+              <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} down`} disabled={i === value.education.length - 1}
+                onClick={() => set("education", move(value.education, i, 1))}>↓</button>
               <button type="button" className="btn btn-ghost" onClick={() => set("education", value.education.filter((_, j) => j !== i))}>
                 Remove
               </button>
             </div>
           </div>
         ))}
+        </div>
       </section>
 
       <section className="stack">
