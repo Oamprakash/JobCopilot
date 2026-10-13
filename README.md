@@ -93,6 +93,12 @@ npm run dev
 
 All settings are in [`backend/.env.example`](backend/.env.example). The API reads environment variables, not the file itself, so start it with `run.sh` / `run.ps1`, which load `backend/.env` (git-ignored) first; empty values keep the defaults. To set one by hand instead: `export ANTHROPIC_API_KEY=...` (macOS/Linux) or `$env:ANTHROPIC_API_KEY = "..."` (PowerShell), in the same terminal, before `./gradlew run`. If PowerShell refuses to run the script, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
+## Launch
+
+- [docs/launch.md](docs/launch.md): your own domain, email sign-in (Resend), production mode, moving the database before the free one expires, R2 file storage, and a pre-launch checklist.
+- [docs/chrome-web-store.md](docs/chrome-web-store.md): publishing the extension (listing text, permission justifications, data disclosures).
+- The app's name lives in `web/lib/brand.ts`, `APP_NAME` and `extension/manifest.json`. `/privacy` and `/terms` read it from there.
+
 ## Deploy to Render (free, always online)
 
 `render.yaml` is a Render Blueprint: one free Docker web service in Singapore that runs the API and the web app together (`deploy/render.Dockerfile`), plus a free Postgres database. CI builds this image and smoke-tests it at 512 MB on every push.

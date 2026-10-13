@@ -35,6 +35,24 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Launch settings (docs/launch.md). Blueprints only prompt for these when the service is first created;
+      # on an existing service, add them under Environment in the dashboard.
+      - key: APP_NAME
+        sync: false
+      - key: WEB_BASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
 
 databases:
   - name: jobcopilot-db
