@@ -30,6 +30,10 @@ jobs:
               r = ET.parse(path).getroot()
               t += int(r.get("tests", 0)); f += int(r.get("failures", 0))
               e += int(r.get("errors", 0)); s += int(r.get("skipped", 0))
+              for case in r.iter("testcase"):
+                  for bad in list(case.findall("failure")) + list(case.findall("error")):
+                      msg = (bad.get("message") or bad.text or "").strip().replace("\n", " ")[:400]
+                      print(f"::error title={case.get('classname')}.{case.get('name')}::{msg}")
           print(f"::notice title=Backend tests::{t - f - e - s} passed, {f + e} failed, {s} skipped of {t}")
           EOF
       - run: ./gradlew buildFatJar --no-daemon
@@ -66,6 +70,12 @@ jobs:
       - run: node -e "const m=require('./manifest.json'); if (m.manifest_version!==3) process.exit(1)"
       - run: for f in background.js popup.js lib/match.js content/fill.js content/extract.js; do node --check "$f"; done
       - run: node --test test/*.test.js
+      # The Chrome Web Store package: the extension without its tests.
+      - run: zip -qr ../extension.zip . -x 'test/*' 'pack.ps1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip
+          path: extension.zip
 
   # The Render image: build it, start it within the free plan's 512 MB, and check both halves answer.
   deploy-image:

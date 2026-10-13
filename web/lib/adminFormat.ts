@@ -73,9 +73,9 @@ export function describe(e: AdminEvent): string {
     case "extension_connected":
       return "Connected the browser extension";
     case "extension_autofill":
-      return d.matched ? `Autofilled the form for ${job} with the extension` : `Used the extension on ${d.host || "a page"} (no tailored application matched)`;
+      return d.matched ? `Autofilled the form for ${job} with the extension` : "Used the extension's autofill with profile details only";
     case "job_saved_from_page":
-      return `Saved ${job} from ${d.host || "a page"} with the extension`;
+      return "Saved a job from a web page with the extension";
     case "marked_applied":
       return `Marked ${job} as applied${d.via === "extension" ? " (extension)" : ""}`;
     case "tracker_stage":

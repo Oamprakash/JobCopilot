@@ -177,10 +177,9 @@ fun Route.extensionRoutes(deps: Deps) {
                         )
                     }
                 }
-                Events.record(
-                    c, userId, EventTypes.EXTENSION_AUTOFILL, match?.jobId,
-                    Events.data("host" to (JobUrls.normalize(pageUrl)?.substringBefore('/') ?: ""), "matched" to (application != null)),
-                )
+                // Chrome Web Store Limited Use: nothing read from the page (its address, its content) goes into records
+                // people can read. The event says only that autofill ran, and for which of the user's own applications.
+                Events.record(c, userId, EventTypes.EXTENSION_AUTOFILL, application?.let { match.jobId }, Events.data("matched" to (application != null)))
                 AutofillResponse(
                     profile = Autofill.profileFields(profile, user.email),
                     application = application,
@@ -219,7 +218,8 @@ fun Route.extensionRoutes(deps: Deps) {
                 val existing = ManualJobs.findByUrl(c, { JobUrls.sameJob(it, url) || JobUrls.sameJob(url, it) }, host)
                 val jobId = existing ?: ManualJobs.upsert(c, url, title, r.company.trim().ifEmpty { host }, r.location.trim(), r.description.trim())
                 val added = Tracker.add(c, userId, jobId, "saved")
-                Events.record(c, userId, EventTypes.JOB_SAVED_FROM_PAGE, jobId, Events.data("host" to host, "existing" to (existing != null)))
+                // No job or site in the record: what was saved came from a web page (see the autofill event above).
+                Events.record(c, userId, EventTypes.JOB_SAVED_FROM_PAGE)
                 SaveJobResponse(jobId.toString(), Tracker.find(c, userId, jobId)?.stage ?: "saved", alreadyTracked = !added)
             }
             call.respond(result)

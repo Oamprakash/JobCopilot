@@ -53,7 +53,8 @@ export default function PrivacyPage() {
         The extension works only when you click it. On the page you&apos;re on, it fills empty form fields with your profile, tailored
         answers and resume, or reads the job posting when you choose <em>Save this job</em>. It doesn&apos;t read other pages, your
         browsing history or anything you type, and it never submits a form. It stores one sign-in token on your device; you can
-        disconnect it from your profile at any time.
+        disconnect it from your profile at any time. Our activity records note only that you used the extension, never the pages
+        you used it on or what they contain, and nothing it reads is used for advertising or shared beyond the providers below.
       </p>
 
       <h2>Who processes data for us</h2>
