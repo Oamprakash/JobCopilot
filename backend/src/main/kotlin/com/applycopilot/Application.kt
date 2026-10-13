@@ -1,5 +1,6 @@
 package com.applycopilot
 
+import com.applycopilot.api.digestRoutes
 import com.applycopilot.jobs.FollowUpReminders
 import com.applycopilot.api.extensionRoutes
 import com.applycopilot.api.extensionPairingRoutes
@@ -105,6 +106,8 @@ fun Application.module(deps: Deps) {
         authRoutes(deps)
         // The browser extension authenticates with its own bearer token, not the session cookie.
         extensionRoutes(deps)
+        // The daily email's unsubscribe link works without signing in; it's signed per user instead.
+        digestRoutes(deps)
         authenticate(SESSION_AUTH) {
             accountRoutes(deps)
             resumeRoutes(deps)
@@ -122,6 +125,7 @@ fun Application.module(deps: Deps) {
             deps.db, deps.ingestion, deps.matching, java.time.Duration.ofHours(deps.config.ingestIntervalHours),
             eventRetentionDays = deps.config.eventRetentionDays,
             followUps = FollowUpReminders(deps.db, deps.mailer, deps.config.webBaseUrl),
+            digests = deps.digests,
         ).start(this)
     }
 

@@ -7,6 +7,7 @@ import com.applycopilot.api.EditApplicationRequest
 import com.applycopilot.api.ExtMeResponse
 import com.applycopilot.api.ExtensionStatusResponse
 import com.applycopilot.api.FeedResponse
+import com.applycopilot.api.InterviewPrepResponse
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
 import com.applycopilot.api.ManualJobRequest
@@ -48,6 +49,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -393,5 +395,58 @@ class TailorApiTest {
         val app = client.tailor(jobs.getValue("Senior Android Engineer")).body<ApplicationDto>()
         assertEquals("heuristic", app.generator)
         assertTrue(app.application.coverLetter.isNotBlank())
+    }
+
+    @Test
+    fun dailyMatchEmailAndUnsubscribe() = withApp { deps ->
+        val client = newClient()
+        client.onboardAndFeed()
+        assertTrue(client.get("/preferences").body<Preferences>().dailyDigest, "on by default")
+
+        val mailer = deps.mailer as ConsoleMailer
+        assertEquals(1, deps.digests.sendDue())
+        val (email, items, unsubscribe) = mailer.digests.single()
+        assertEquals("oam@example.com", email)
+        assertTrue(items.isNotEmpty() && items.size <= 5)
+        assertTrue(items.all { it.score >= 40 && it.link.contains("/apply/") })
+        assertEquals(items.sortedByDescending { it.score }, items, "best first")
+        assertEquals(0, deps.digests.sendDue(), "one email per day")
+
+        val path = unsubscribe.substringAfter("/api")
+        assertEquals(HttpStatusCode.BadRequest, client.get(path.dropLast(1) + "x").status)
+        val page = client.get(path)
+        assertEquals(HttpStatusCode.OK, page.status)
+        assertTrue(page.bodyAsText().contains("unsubscribed"))
+        assertFalse(client.get("/preferences").body<Preferences>().dailyDigest)
+        assertEquals(HttpStatusCode.OK, client.post(path).status, "one-click unsubscribe from mail apps")
+
+        // Back on, but nothing new has been matched since the last email.
+        val prefs = client.get("/preferences").body<Preferences>()
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(dailyDigest = true)) }
+        assertTrue(client.get("/preferences").body<Preferences>().dailyDigest)
+        assertEquals(0, deps.digests.sendDue(Instant.now().plus(Duration.ofDays(1))))
+    }
+
+    @Test
+    fun interviewPrepIsGroundedInTheProfile() = withApp {
+        val client = newClient()
+        val jobId = client.onboardAndFeed().getValue("Senior Android Engineer")
+        assertEquals(HttpStatusCode.NotFound, client.get("/tracker/$jobId/prep").status)
+
+        val made = client.post("/tracker/$jobId/prep").body<InterviewPrepResponse>()
+        assertEquals("heuristic", made.generator)
+        val prep = made.prep
+        assertTrue(prep.questions.size in 4..10, "${prep.questions.map { it.question }}")
+        assertTrue(prep.questions.any { it.question.contains("Acme") })
+        val bullets = setOf(
+            "Lead a team of 20+ Android engineers across 4 apps",
+            "Built Jetpack Compose UI with a shared design system",
+        )
+        val points = prep.questions.flatMap { it.points }
+        assertTrue(points.isNotEmpty())
+        assertTrue(points.any { it.text in bullets }, "talking points are the user's own bullets: $points")
+        assertTrue("Kotlin Multiplatform" in prep.gaps)
+
+        assertEquals(prep, client.get("/tracker/$jobId/prep").body<InterviewPrepResponse>().prep)
     }
 }

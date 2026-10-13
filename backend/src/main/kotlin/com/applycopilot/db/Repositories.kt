@@ -196,7 +196,7 @@ object PreferencesTable {
         c.prepareStatement(
             """
             SELECT roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies,
-                   needs_visa_sponsorship
+                   needs_visa_sponsorship, daily_digest
             FROM preferences WHERE user_id = ?
             """.trimIndent(),
         ).use { st ->
@@ -211,6 +211,7 @@ object PreferencesTable {
                     noticePeriodDays = rs.getObject("notice_period_days")?.let { (it as Number).toInt() },
                     skipCompanies = rs.textArray("skip_companies"),
                     needsVisaSponsorship = rs.getBoolean("needs_visa_sponsorship"),
+                    dailyDigest = rs.getBoolean("daily_digest"),
                 )
             }
         }
@@ -219,8 +220,8 @@ object PreferencesTable {
         c.prepareStatement(
             """
             INSERT INTO preferences (user_id, roles, locations, remote_mode, min_ctc_lpa, experience_years, notice_period_days, skip_companies,
-                                     needs_visa_sponsorship, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+                                     needs_visa_sponsorship, daily_digest, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
             ON CONFLICT (user_id) DO UPDATE SET
                 roles = EXCLUDED.roles,
                 locations = EXCLUDED.locations,
@@ -230,6 +231,7 @@ object PreferencesTable {
                 notice_period_days = EXCLUDED.notice_period_days,
                 skip_companies = EXCLUDED.skip_companies,
                 needs_visa_sponsorship = EXCLUDED.needs_visa_sponsorship,
+                daily_digest = EXCLUDED.daily_digest,
                 updated_at = now()
             """.trimIndent(),
         ).use { st ->
@@ -242,6 +244,7 @@ object PreferencesTable {
             if (p.noticePeriodDays == null) st.setNull(7, Types.INTEGER) else st.setInt(7, p.noticePeriodDays)
             st.setArray(8, c.createArrayOf("text", p.skipCompanies.toTypedArray()))
             st.setBoolean(9, p.needsVisaSponsorship)
+            st.setBoolean(10, p.dailyDigest)
             st.executeUpdate()
         }
     }

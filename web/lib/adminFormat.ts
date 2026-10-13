@@ -20,6 +20,9 @@ export const eventLabels: Record<string, string> = {
   job_saved_from_page: "Jobs saved from a page",
   marked_applied: "Marked as applied",
   tracker_stage: "Tracker stage changes",
+  digest_sent: "Daily match emails sent",
+  digest_unsubscribed: "Daily email unsubscribes",
+  interview_prep: "Interview preps",
 };
 
 export const funnelLabels: [string, string][] = [
@@ -80,6 +83,12 @@ export function describe(e: AdminEvent): string {
       return `Marked ${job} as applied${d.via === "extension" ? " (extension)" : ""}`;
     case "tracker_stage":
       return d.from ? `Moved ${job} from ${d.from} to ${d.stage}` : `Added ${job} to the tracker as ${d.stage}`;
+    case "digest_sent":
+      return `Was emailed ${d.jobs ?? "some"} new match${d.jobs === 1 ? "" : "es"}`;
+    case "digest_unsubscribed":
+      return "Unsubscribed from the daily match email";
+    case "interview_prep":
+      return `Prepared for an interview for ${job} (${d.questions ?? "?"} questions, ${d.generator === "claude" ? "Claude" : "rule-based"})`;
     default:
       return e.type;
   }

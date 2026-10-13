@@ -1,5 +1,6 @@
 package com.applycopilot.api
 
+import com.applycopilot.tailoring.InterviewPrep
 import com.applycopilot.Deps
 import com.applycopilot.db.EventTypes
 import com.applycopilot.db.Events
@@ -40,6 +41,9 @@ data class TrackerItemDto(
     val createdAt: String,
     val applicationStatus: String?,
 )
+
+@Serializable
+data class InterviewPrepResponse(val jobId: String, val generator: String, val prep: InterviewPrep)
 
 @Serializable
 data class TrackerResponse(val items: List<TrackerItemDto>, val counts: Map<String, Int>, val dueCount: Int)
@@ -154,6 +158,22 @@ fun Route.trackerRoutes(deps: Deps) {
                 Tracker.find(c, userId, jobId)!!
             }
             call.respond(item.toDto(Instant.now()))
+        }
+
+        // Interview prep for a job: the saved one, or a new one generated now.
+        get("/{jobId}/prep") {
+            val userId = call.userId()
+            val jobId = jobParam(call.parameters["jobId"])
+            val saved = deps.db.tx { c -> deps.interviewPrep.find(c, userId, jobId) } ?: throw ApiException(HttpStatusCode.NotFound, "No interview prep yet")
+            call.respond(InterviewPrepResponse(jobId.toString(), saved.second, saved.first))
+        }
+
+        post("/{jobId}/prep") {
+            call.requireSameOrigin(deps.config)
+            val userId = call.userId()
+            val jobId = jobParam(call.parameters["jobId"])
+            val (prep, generator) = deps.interviewPrep.generate(userId, jobId)
+            call.respond(InterviewPrepResponse(jobId.toString(), generator, prep))
         }
 
         delete("/{jobId}") {

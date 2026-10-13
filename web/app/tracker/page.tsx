@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { InterviewPrepPanel } from "@/components/InterviewPrepPanel";
 import { Problems } from "@/components/Problems";
 import { api, type TrackerItem, type TrackerList, type TrackerPatch, type TrackerStage } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
@@ -145,6 +146,8 @@ function summarize(items: TrackerItem[]): TrackerList {
 function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate: (i: TrackerItem, p: TrackerPatch) => void; onRemove: (i: TrackerItem) => void }) {
   const [notes, setNotes] = useState(item.notes);
   const open = item.stage === "saved" || item.stage === "applied" || item.stage === "interview";
+  const canPrep = item.stage === "applied" || item.stage === "interview";
+  const [showPrep, setShowPrep] = useState(false);
   return (
     <article className={`card tracker-card${item.followUpDue ? " tracker-due" : ""}`}>
       <div className="tracker-main stack" style={{ gap: 8 }}>
@@ -188,6 +191,7 @@ function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate
             onBlur={() => notes !== item.notes && onUpdate(item, { notes })}
           />
         </label>
+        {canPrep && showPrep && <InterviewPrepPanel jobId={item.jobId} company={item.company} />}
       </div>
 
       <div className="job-actions">
@@ -203,6 +207,11 @@ function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate
           <Link className="btn btn-secondary" href={`/apply/${item.jobId}`}>
             {item.applicationStatus === "approved" ? "Application" : "Draft application"}
           </Link>
+        )}
+        {canPrep && (
+          <button type="button" className={item.stage === "interview" ? "btn btn-primary" : "btn btn-secondary"} aria-expanded={showPrep} onClick={() => setShowPrep((v) => !v)}>
+            {showPrep ? "Hide interview prep" : "Interview prep"}
+          </button>
         )}
         <button type="button" className="btn btn-ghost small" onClick={() => onRemove(item)}>Remove</button>
       </div>

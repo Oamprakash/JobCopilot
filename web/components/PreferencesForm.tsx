@@ -60,6 +60,13 @@ export function PreferencesForm({ value, onChange }: { value: Preferences; onCha
         onChange={(v) => set("skipCompanies", v)}
         placeholder="Add a company"
       />
+      <label className="checkbox">
+        <input type="checkbox" checked={value.dailyDigest ?? true} onChange={(e) => set("dailyDigest", e.target.checked)} />
+        <span>
+          Email me my best new matches each morning
+          <span className="hint" style={{ display: "block" }}>Up to 5 jobs, only on days with something new. Every email has a one-click unsubscribe.</span>
+        </span>
+      </label>
     </div>
   );
 }

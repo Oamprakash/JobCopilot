@@ -66,4 +66,6 @@ data class Preferences(
     val skipCompanies: List<String> = emptyList(),
     /** For jobs outside India: hide the ones whose description says there's no visa sponsorship. */
     val needsVisaSponsorship: Boolean = false,
+    /** A morning email with the day's new matches. */
+    val dailyDigest: Boolean = true,
 )

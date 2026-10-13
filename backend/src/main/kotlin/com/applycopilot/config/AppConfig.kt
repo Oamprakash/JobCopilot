@@ -39,6 +39,9 @@ data class AppConfig(
     val inviteEmails: Set<String> = emptySet(),
     /** When set, uploaded files go to this bucket instead of [storageDir]. */
     val objectStorage: ObjectStorageConfig? = null,
+    /** The daily match email goes out at this hour (DIGEST_HOUR, 0-23) in [digestTimeZone] (DIGEST_TIMEZONE). */
+    val digestHour: Int = 8,
+    val digestTimeZone: String = "Asia/Kolkata",
     /** The product's name in emails and messages (APP_NAME). */
     val appName: String = "Apply Copilot",
     /** Activity events (admin dashboard) are kept this many days. */
@@ -87,6 +90,8 @@ data class AppConfig(
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
                 appName = appName,
+                digestHour = (env["DIGEST_HOUR"]?.toIntOrNull() ?: 8).coerceIn(0, 23),
+                digestTimeZone = env["DIGEST_TIMEZONE"]?.takeIf { it.isNotBlank() } ?: "Asia/Kolkata",
                 objectStorage = objectStorage(env),
                 publicPreview = env["PUBLIC_PREVIEW"]?.toBoolean() ?: false,
                 inviteEmails = env["INVITE_EMAILS"].orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet(),

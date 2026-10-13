@@ -43,7 +43,27 @@ export type Preferences = {
   skipCompanies: string[];
   /** For jobs abroad: hide the ones whose description rules out visa sponsorship. */
   needsVisaSponsorship?: boolean;
+  /** A morning email with the day's best new matches. On unless turned off. */
+  dailyDigest?: boolean;
 };
+
+export type InterviewQuestionKind = "role" | "skill" | "gap" | "behavioural" | "company";
+
+export type InterviewPrep = {
+  questions: {
+    question: string;
+    why: string;
+    /** The user's own resume bullets to draw on, with the role each came from. */
+    points: { role: string; text: string }[];
+    tip: string;
+    kind: InterviewQuestionKind | string;
+  }[];
+  /** Skills the job asks for that the profile doesn't show: worth an honest answer ready. */
+  gaps: string[];
+  removed: string[];
+};
+
+export type InterviewPrepView = { jobId: string; generator: "claude" | "heuristic"; prep: InterviewPrep };
 
 export type Me = { id: string; email: string; plan: "free" | "pro"; hasProfile: boolean; isAdmin?: boolean };
 
@@ -323,6 +343,8 @@ export const api = {
   updateTracker: (jobId: string, patch: TrackerPatch) =>
     request<TrackerItem>(`/tracker/${jobId}`, { method: "PUT", body: json(patch) }),
   untrack: (jobId: string) => request<{ ok: boolean }>(`/tracker/${jobId}`, { method: "DELETE" }),
+  interviewPrep: (jobId: string) => request<InterviewPrepView>(`/tracker/${jobId}/prep`),
+  prepareInterview: (jobId: string) => request<InterviewPrepView>(`/tracker/${jobId}/prep`, { method: "POST" }),
 
   extensionStatus: () => request<{ connected: number }>("/extension"),
   extensionPairCode: () => request<{ code: string; expiresAt: string }>("/extension/pair-code", { method: "POST" }),
@@ -347,4 +369,5 @@ export const emptyPreferences: Preferences = {
   noticePeriodDays: null,
   skipCompanies: [],
   needsVisaSponsorship: false,
+  dailyDigest: true,
 };

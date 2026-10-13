@@ -2,7 +2,7 @@
 
 AI job-application copilot: finds well-matched jobs, tailors each application, and autofills forms, while the user always clicks Submit.
 
-Built so far: **Phase 1 (Foundation)**: sign-in, resume parsing, the master profile and preferences. **Phase 2 (Job feed)**: board ingestion, matching and the daily feed. **Phase 3 (Tailoring)**: a tailored resume, cover letter and screening answers per job, with a claim guardrail and a review screen. **Phase 4 (Extension and tracker)**: a Chrome extension that fills application forms and saves jobs from any page, and an application tracker with follow-up reminders.
+Built so far: **Phase 1 (Foundation)**: sign-in, resume parsing, the master profile and preferences. **Phase 2 (Job feed)**: board ingestion, matching and the daily feed. **Phase 3 (Tailoring)**: a tailored resume, cover letter and screening answers per job, with a claim guardrail and a review screen. **Phase 4 (Extension and tracker)**: a Chrome extension that fills application forms and saves jobs from any page, and an application tracker with follow-up reminders. **Phase 5 (Engagement)**: a daily match email and interview prep.
 
 ```
 backend/   Kotlin + Ktor API, Postgres (Flyway), resume parsing (PDFBox, POI, Claude API)
@@ -60,6 +60,13 @@ Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","bo
 | Tracker | `/tracker`: every saved or applied job with its stage (Saved, Applied, Interviewing, Offer, Rejected, Withdrawn), applied date, follow-up date (+3 days / +1 week / done) and notes, filterable by stage and "Follow up". Add jobs from anywhere by hand. **I submitted it** (review screen or extension) marks a job applied and sets a follow-up a week out. |
 | Follow-up reminders | Hourly, each user gets one email listing the tracked jobs whose follow-up date has passed (once per date), linking to the tracker. Without `RESEND_API_KEY` the email is logged. |
 | Extension sign-in | Profile → **Browser extension** gives a one-time 8-character code (10 minutes). The extension exchanges it for its own token (only a hash is stored) and asks permission for just your app's address. **Disconnect everywhere** revokes every extension token. |
+
+## What works in Phase 5
+
+| Area | What it does |
+| --- | --- |
+| Daily match email | Each morning (`DIGEST_HOUR`, default 8, in `DIGEST_TIMEZONE`, default Asia/Kolkata) every user with a profile gets up to 5 of their best new matches (score 40+) scored since their last email, with a count of the rest and links to review each. No new matches, no email. On by default; off under Preferences or with the one-click unsubscribe link (signed per user; `List-Unsubscribe` headers for mail apps). Checked hourly, so a restart never sends twice. |
+| Interview prep | Tracker → **Interview prep** on an applied or interviewing job: up to 10 likely questions (about you, the job's skills, gaps, leadership, the company), each with why it's asked, a tip, and talking points that are your own resume bullets, word for word. Skills the job asks for that your profile lacks are listed so you can prepare an honest answer. Uses Claude when `ANTHROPIC_API_KEY` is set (rule-based otherwise or on failure); whatever Claude writes passes the same claim guard as tailoring. 10 a day per user. |
 
 ### Install the extension
 
@@ -159,6 +166,8 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | POST | `/tracker` | `{jobId, stage}`: track a known job (`applied` sets a follow-up in 7 days) |
 | POST | `/tracker/manual` | `{title, company, url, location?, stage?}` |
 | PUT/DELETE | `/tracker/{jobId}` | `{stage?, followUpAt?, clearFollowUp?, notes?}` / remove |
+| GET/POST | `/tracker/{jobId}/prep` | saved interview prep (404 if none) / make a new one |
+| GET/POST | `/digest/unsubscribe?u=&t=` | one-click unsubscribe from the daily match email (no sign-in; signed link) |
 | GET/POST/DELETE | `/extension`, `/extension/pair-code` | extension status, a pairing code, disconnect all |
 | | `/ext/*` | the extension's API (bearer token): `pair`, `me`, `autofill?url=&jobId=`, `applications/{jobId}/resume.pdf`, `save`, `applied` |
 | POST | `/events` | `{type: "job_opened"\|"apply_clicked", jobId}`: link clicks the browser reports |

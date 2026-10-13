@@ -339,6 +339,17 @@ object TailorGuard {
         )
     }
 
+    /**
+     * Text about a job for this candidate (interview prep advice): keeps sentences whose numbers and skills come
+     * from the profile or the job description, drops the rest and notes them in [removed].
+     */
+    fun groundedText(text: String, profile: Profile, job: JobForTailoring, removed: MutableList<String>, where: String): String {
+        val profileText = profileFacts(profile)
+        val okNumbers = numbers(profileText) + numbers(job.title + "\n" + job.description)
+        val okSkills = profileSkills(profile, profileText) + SkillDictionary.findIn(job.title + "\n" + job.description).map { it.lowercase() }
+        return filterSentences(text, okNumbers, okSkills, where, removed, exempt = listOf(job.title, job.company).filter { it.isNotBlank() })
+    }
+
     /** Warnings for text the user typed themselves: we don't block their edits, we flag unverified claims. */
     fun warnings(app: TailoredApplication, profile: Profile): List<String> {
         val profileText = profileFacts(profile)

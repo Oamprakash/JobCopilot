@@ -1,5 +1,8 @@
 package com.applycopilot
 
+import com.applycopilot.tailoring.claude.ClaudeInterviewPrep
+import com.applycopilot.tailoring.InterviewPrepService
+import com.applycopilot.jobs.DigestService
 import com.applycopilot.auth.ConsoleMailer
 import com.applycopilot.auth.JwtService
 import com.applycopilot.auth.Mailer
@@ -34,9 +37,14 @@ class Deps(
     val ingestion: IngestionService,
     val matching: MatchingService,
     val tailor: TailorService,
+    val interviewPrep: InterviewPrepService,
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
     val autocomplete = AutocompleteService(db)
+    val digests = DigestService(
+        db, mailer, config.webBaseUrl, config.jwtSecret,
+        zone = java.time.ZoneId.of(config.digestTimeZone), hour = config.digestHour,
+    )
 
     override fun close() = onClose.forEach { runCatching { it.close() } }
 
@@ -61,6 +69,7 @@ class Deps(
                 ),
                 matching = MatchingService(db, scorer),
                 tailor = TailorService(db, config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }, config.freeTailorLimit),
+                interviewPrep = InterviewPrepService(db, config.anthropicApiKey?.let { ClaudeInterviewPrep(http, it, config.claudeModel) }),
                 onClose = listOf(db, http),
             )
         }

@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <tr><th>Data</th><th>Why we use it</th></tr>
         </thead>
         <tbody>
-          <tr><td>Your email address</td><td>To sign you in with one-time links and send emails you asked for, such as follow-up reminders.</td></tr>
+          <tr><td>Your email address</td><td>To sign you in with one-time links and send emails about your account: follow-up reminders and, unless you turn it off, a morning email with your best new matches. Every match email has a one-click unsubscribe link, and you can turn it off under Preferences.</td></tr>
           <tr>
             <td>Your resume file and its text</td>
             <td>To build your profile. We read the text only to fill in the profile you then review and save.</td>
@@ -33,11 +33,11 @@ export default function PrivacyPage() {
           </tr>
           <tr><td>Your job preferences: roles, locations, work mode, pay floor, notice period, companies to skip, visa needs</td><td>To find and filter jobs for you.</td></tr>
           <tr>
-            <td>Your matches, tailored applications (resume, cover letter, answers, any job description you paste) and tracker (stages, dates, notes)</td>
-            <td>To show your feed, let you review and download applications, and remind you to follow up.</td>
+            <td>Your matches, tailored applications (resume, cover letter, answers, any job description you paste) tracker (stages, dates, notes) and interview prep</td>
+            <td>To show your feed, let you review and download applications, remind you to follow up and help you prepare for interviews.</td>
           </tr>
           <tr>
-            <td>Activity in the app: sign-ins, searches you save, feed refreshes, jobs you open, save or skip, applications you tailor, approve or download, clicks through to apply, and use of the browser extension</td>
+            <td>Activity in the app: sign-ins, searches you save, feed refreshes, jobs you open, save or skip, applications you tailor, approve or download, clicks through to apply, interview preps, match emails sent and unsubscribes, and use of the browser extension</td>
             <td>To run the service, fix problems, prevent abuse and understand which features help. Our administrators can see this for each account; their own access to it is logged.</td>
           </tr>
           <tr><td>A session cookie</td><td>To keep you signed in (30 days). It is the only cookie we set. We use no advertising or third-party tracking cookies.</td></tr>
@@ -61,7 +61,7 @@ export default function PrivacyPage() {
       <p>We share data only with these service providers, only to run {brand.name}, and under their own security and privacy commitments:</p>
       <ul>
         <li><strong>Render</strong> (hosting and database) and <strong>Cloudflare</strong> (file storage and network): store and serve everything above.</li>
-        <li><strong>Resend</strong>: sends sign-in and reminder emails to your address.</li>
+        <li><strong>Resend</strong>: sends sign-in, reminder and daily match emails to your address.</li>
         <li>
           <strong>Anthropic</strong> (the Claude AI model), when enabled: reads your resume text and profile to fill in your profile,
           score job fit and draft tailored applications. Under its commercial terms, Anthropic doesn&apos;t train its models on this data.

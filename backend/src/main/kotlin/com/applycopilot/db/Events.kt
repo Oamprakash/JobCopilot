@@ -30,6 +30,9 @@ object EventTypes {
     const val JOB_SAVED_FROM_PAGE = "job_saved_from_page"
     const val MARKED_APPLIED = "marked_applied"
     const val TRACKER_STAGE = "tracker_stage"
+    const val DIGEST_SENT = "digest_sent"
+    const val DIGEST_UNSUBSCRIBED = "digest_unsubscribed"
+    const val INTERVIEW_PREP = "interview_prep"
     /** Audit trail: an admin opened a user's activity. Recorded against the admin. */
     const val ADMIN_VIEWED_USER = "admin_viewed_user"
 

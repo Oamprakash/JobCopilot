@@ -23,17 +23,19 @@ class Scheduler(
     /** Activity events older than this are deleted on each run. */
     private val eventRetentionDays: Int = 180,
     private val followUps: FollowUpReminders? = null,
+    private val digests: DigestService? = null,
     /** Follow-up reminders go out on their own, shorter cycle so a due date isn't missed by a day. */
     private val reminderInterval: Duration = Duration.ofHours(1),
 ) {
     private val log = LoggerFactory.getLogger(Scheduler::class.java)
 
     fun start(scope: CoroutineScope): Job = scope.launch {
-        followUps?.let { reminders ->
+        if (followUps != null || digests != null) {
             launch {
                 delay(firstRunDelay.toMillis())
                 while (isActive) {
-                    runCatching { reminders.sendDue() }.onFailure { log.error("Follow-up reminders failed", it) }
+                    followUps?.let { runCatching { it.sendDue() }.onFailure { e -> log.error("Follow-up reminders failed", e) } }
+                    digests?.let { runCatching { it.sendDue() }.onFailure { e -> log.error("Daily match emails failed", e) } }
                     delay(reminderInterval.toMillis())
                 }
             }
