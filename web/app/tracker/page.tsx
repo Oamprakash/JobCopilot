@@ -91,7 +91,7 @@ export default function TrackerPage() {
     <>
       <AppHeader email={me?.email} isAdmin={me?.isAdmin} />
       <main className="container stack" style={{ gap: 20 }}>
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+        <div className="row page-title" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
           <h1>Tracker</h1>
           <span className="small muted">Jobs you saved and applied to, with follow-up reminders.</span>
         </div>
@@ -162,7 +162,7 @@ function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate
         </div>
 
         {open && (
-          <div className="row small" style={{ gap: 8 }}>
+          <div className="row small follow-row" style={{ gap: 8 }}>
             {item.followUpAt ? (
               <span className={item.followUpDue ? "follow-due" : "muted"}>
                 {item.followUpDue ? "Follow up now" : `Follow up ${fmt(item.followUpAt)}`}
@@ -191,7 +191,6 @@ function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate
             onBlur={() => notes !== item.notes && onUpdate(item, { notes })}
           />
         </label>
-        {canPrep && showPrep && <InterviewPrepPanel jobId={item.jobId} company={item.company} />}
       </div>
 
       <div className="job-actions">
@@ -210,11 +209,16 @@ function TrackerCard({ item, onUpdate, onRemove }: { item: TrackerItem; onUpdate
         )}
         {canPrep && (
           <button type="button" className={item.stage === "interview" ? "btn btn-primary" : "btn btn-secondary"} aria-expanded={showPrep} onClick={() => setShowPrep((v) => !v)}>
-            {showPrep ? "Hide interview prep" : "Interview prep"}
+            {showPrep ? "Hide prep" : "Interview prep"}
           </button>
         )}
         <button type="button" className="btn btn-ghost small" onClick={() => onRemove(item)}>Remove</button>
       </div>
+      {canPrep && showPrep && (
+        <div className="tracker-prep">
+          <InterviewPrepPanel jobId={item.jobId} company={item.company} />
+        </div>
+      )}
     </article>
   );
 }

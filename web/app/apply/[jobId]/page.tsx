@@ -212,17 +212,27 @@ export default function ApplyPage() {
           {tab === "letter" && <LetterEditor app={draft} onChange={edit} />}
           {tab === "answers" && <AnswersEditor app={draft} onChange={edit} />}
 
-          <div className="row">
-            <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || !!busy}>
-              {busy === "Saving…" ? "Saving…" : "Save edits"}
+          <div className="row action-bar">
+            <button type="button" className={dirty ? "btn btn-primary" : "btn btn-secondary"} onClick={save} disabled={!dirty || !!busy}>
+              {busy === "Saving…" ? "Saving…" : dirty ? "Save edits" : "Saved"}
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => regenerate()} disabled={!!busy}>
               Regenerate
             </button>
+            {/* On phones the approve card is far below the resume; this keeps the next step in reach. */}
+            {!approved ? (
+              <button type="button" className="btn btn-primary phone-only" onClick={approve} disabled={!!busy}>
+                {busy === "Approving…" ? "Approving…" : "Approve"}
+              </button>
+            ) : (
+              <a className="btn btn-primary phone-only" href={api.resumePdfUrl(jobId)} download>
+                Resume PDF
+              </a>
+            )}
           </div>
         </section>
 
-        <aside className="side stack" style={{ maxWidth: 360 }}>
+        <aside className="side stack apply-side">
           <section className="card stack" style={{ gap: 12 }}>
             {view.score != null && (
               <div className="row" style={{ gap: 12 }}>

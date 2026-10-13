@@ -46,8 +46,8 @@ export function AppHeader({ email, isAdmin }: { email?: string; isAdmin?: boolea
             </Link>
           )}
         </nav>
-        {email && <span className="small muted">{email}</span>}
-        <button type="button" className="btn btn-ghost" onClick={signOut}>
+        {email && <span className="small muted header-email">{email}</span>}
+        <button type="button" className="btn btn-ghost header-signout" onClick={signOut}>
           Sign out
         </button>
       </div>

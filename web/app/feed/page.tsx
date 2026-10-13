@@ -148,7 +148,7 @@ export default function FeedPage() {
     <>
       <AppHeader email={me?.email} isAdmin={me?.isAdmin} />
       <main className="container split" style={{ gap: 24 }}>
-        <aside className="side stack" style={{ maxWidth: 300 }}>
+        <aside className="side stack feed-side">
           <section className="card stack" style={{ gap: 12 }}>
             <h2>Matching on</h2>
             {prefs ? (
@@ -181,12 +181,12 @@ export default function FeedPage() {
         </aside>
 
         <section className="main stack">
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className="row page-title" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <h1>Today&apos;s matches</h1>
             <span className="small muted">{runSummary(lastRun, refreshing)}</span>
           </div>
 
-          <div className="row" style={{ justifyContent: "space-between" }}>
+          <div className="row tabs-row" style={{ justifyContent: "space-between" }}>
             <nav className="tabs" aria-label="Match lists">
               {tabs.map((t) => (
                 <button
