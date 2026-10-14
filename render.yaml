@@ -1,5 +1,6 @@
 # Render Blueprint: dashboard.render.com → New → Blueprint → pick this repo.
-# One free web service (API + web app in one container) and a free Postgres database, in Singapore.
+# One free web service (API + web app in one container), in Singapore. The database is on Neon (free,
+# Singapore): set DATABASE_URL to its connection string in the dashboard. See docs/launch.md.
 services:
   - type: web
     name: jobcopilot
@@ -11,10 +12,9 @@ services:
     healthCheckPath: /login
     autoDeployTrigger: commit
     envVars:
+      # The Neon connection string, set in the dashboard. sync: false keeps that value on Blueprint syncs.
       - key: DATABASE_URL
-        fromDatabase:
-          name: jobcopilot-db
-          property: connectionString
+        sync: false
       # Not "prod": there's no email service yet, so sign-in links are shown on screen,
       # limited to INVITE_EMAILS by the public preview mode.
       - key: APP_ENV
@@ -53,10 +53,3 @@ services:
         sync: false
       - key: R2_SECRET_ACCESS_KEY
         sync: false
-
-databases:
-  - name: jobcopilot-db
-    plan: free
-    region: singapore
-    databaseName: applycopilot
-    user: applycopilot

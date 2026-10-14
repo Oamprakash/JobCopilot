@@ -55,7 +55,7 @@ Render's free Postgres expires 30 days after creation. Choose one:
    ```
    Keep the quotes around each URL.
 4. Render → service → **Environment**: replace `DATABASE_URL` with the Neon string and save. The service redeploys.
-5. Then make it permanent in `render.yaml`: change the `DATABASE_URL` entry from `fromDatabase` to `sync: false`, so a Blueprint sync doesn't point it back at Render.
+5. `render.yaml` already has `DATABASE_URL` as `sync: false` (done when this app moved to Neon), so a Blueprint sync keeps the value you set.
 6. Delete `jobcopilot.dump` from your computer afterwards: it contains users' data. Leave the old Render database alone for a few days as a fallback.
 
 **Check:** sign in on the live site; your profile, tracker and admin dashboard data are all there.
