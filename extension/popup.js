@@ -34,6 +34,11 @@ function busy(button, label) {
 
 /** The app this extension belongs to. Local addresses are allowed too, for development. */
 const DEFAULT_APP = "https://trulyapply.com";
+/**
+ * Hiring platforms whose forms are often embedded in an employer's careers page. Access to them is asked for once,
+ * on the first Autofill, so a form inside such a frame can be filled. The page itself is reached through activeTab.
+ */
+const FORM_HOSTS = ["https://boards.greenhouse.io/*", "https://job-boards.greenhouse.io/*", "https://jobs.lever.co/*", "https://jobs.ashbyhq.com/*", "https://*.myworkdayjobs.com/*"];
 
 function normalizeBase(raw) {
   let url = (raw || "").trim().replace(/\/+$/, "") || DEFAULT_APP;
@@ -119,11 +124,9 @@ $("pair").addEventListener("click", async () => {
   say("");
   try {
     const base = normalizeBase($("baseUrl").value);
-    // trulyapply.com is allowed at install; a local development copy is asked for once.
-    if (base !== DEFAULT_APP) {
-      const granted = await chrome.permissions.request({ origins: [base + "/*"] });
-      if (!granted) throw new Error("The extension needs permission to reach " + base + ".");
-    }
+    // Access to your app's address only, asked for once (nothing is allowed at install).
+    const granted = await chrome.permissions.request({ origins: [base + "/*"] });
+    if (!granted) throw new Error("The extension needs permission to reach " + base + " to connect to your account.");
     const r = await send("pair", { baseUrl: base, code: $("code").value });
     say("Connected as " + r.email + ".", "good");
     $("code").value = "";
@@ -138,6 +141,8 @@ $("pair").addEventListener("click", async () => {
 $("pickApp").addEventListener("change", (e) => load(e.target.value || undefined));
 
 $("fill").addEventListener("click", async () => {
+  // Asked first, while the click still counts as the user's action. Shown once; declining still fills the page itself.
+  const formHosts = chrome.permissions.request({ origins: FORM_HOSTS }).catch(() => false);
   const done = busy($("fill"), "Filling…");
   say("");
   try {
@@ -145,7 +150,7 @@ $("fill").addEventListener("click", async () => {
     if (!data) return;
     const payload = Object.assign({}, data);
     if ($("pickApp").value === "" && !$("pick").hidden) { payload.application = null; payload.resume = null; }
-    const target = { tabId: tab.id, allFrames: true };
+    const target = { tabId: tab.id, allFrames: await formHosts };
     await chrome.scripting.executeScript({ target, files: ["lib/match.js", "content/fill.js"] });
     const results = await chrome.scripting.executeScript({
       target,

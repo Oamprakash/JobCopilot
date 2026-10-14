@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TrulyApply",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Fills job applications from your approved TrulyApply application and saves jobs to your tracker. You always click Submit.",
   "action": {
     "default_popup": "popup.html",
@@ -25,15 +25,13 @@
     "activeTab",
     "scripting"
   ],
-  "host_permissions": [
+  "optional_host_permissions": [
     "https://trulyapply.com/*",
     "https://boards.greenhouse.io/*",
     "https://job-boards.greenhouse.io/*",
     "https://jobs.lever.co/*",
     "https://jobs.ashbyhq.com/*",
-    "https://*.myworkdayjobs.com/*"
-  ],
-  "optional_host_permissions": [
+    "https://*.myworkdayjobs.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ]
