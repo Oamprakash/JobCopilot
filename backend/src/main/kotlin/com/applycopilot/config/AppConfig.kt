@@ -17,6 +17,8 @@ data class AppConfig(
     val jwtSecret: String,
     /** Origin of the web app, e.g. http://localhost:3000. Magic links point here. */
     val webBaseUrl: String,
+    /** Origins allowed to send changes: the web app's address, plus the host's own address (the old onrender.com link). */
+    val allowedOrigins: Set<String> = setOf(webBaseUrl),
     val anthropicApiKey: String?,
     val claudeModel: String,
     val storageDir: String,
@@ -76,7 +78,8 @@ data class AppConfig(
                 databasePassword = db.third,
                 jwtSecret = jwtSecret,
                 // On Render, RENDER_EXTERNAL_URL is the service's public https address.
-                webBaseUrl = (env["WEB_BASE_URL"]?.takeIf { it.isNotBlank() } ?: env["RENDER_EXTERNAL_URL"] ?: "http://localhost:3000").trimEnd('/'),
+                webBaseUrl = webBaseUrl(env),
+                allowedOrigins = setOfNotNull(webBaseUrl(env), env["RENDER_EXTERNAL_URL"]?.takeIf { it.isNotBlank() }?.trimEnd('/')),
                 anthropicApiKey = env["ANTHROPIC_API_KEY"]?.takeIf { it.isNotBlank() },
                 claudeModel = env["CLAUDE_MODEL"] ?: "claude-sonnet-5-5",
                 storageDir = env["STORAGE_DIR"] ?: "./data/uploads",
@@ -103,6 +106,9 @@ data class AppConfig(
          * JDBC URL, user and password. DATABASE_URL may be a JDBC URL (user and password then come from
          * DATABASE_USER / DATABASE_PASSWORD) or a postgres://user:password@host:port/db URL as hosts like Render give.
          */
+        private fun webBaseUrl(env: Map<String, String>): String =
+            (env["WEB_BASE_URL"]?.takeIf { it.isNotBlank() } ?: env["RENDER_EXTERNAL_URL"] ?: "http://localhost:3000").trimEnd('/')
+
         internal fun database(env: Map<String, String>): Triple<String, String, String> {
             val raw = env["DATABASE_URL"]?.trim().orEmpty()
             if (raw.startsWith("postgres://") || raw.startsWith("postgresql://")) {

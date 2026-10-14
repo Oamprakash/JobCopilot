@@ -35,6 +35,10 @@ class AppConfigTest {
         val base = mapOf("APP_ENV" to "test")
         assertEquals("https://jobcopilot.onrender.com", AppConfig.fromEnv(base + ("RENDER_EXTERNAL_URL" to "https://jobcopilot.onrender.com/")).webBaseUrl)
         assertEquals("http://localhost:3000", AppConfig.fromEnv(base).webBaseUrl)
+        // On its own domain, the old onrender.com address keeps working for people still using it.
+        val moved = AppConfig.fromEnv(base + mapOf("WEB_BASE_URL" to "https://trulyapply.com", "RENDER_EXTERNAL_URL" to "https://jobcopilot.onrender.com"))
+        assertEquals("https://trulyapply.com", moved.webBaseUrl)
+        assertEquals(setOf("https://trulyapply.com", "https://jobcopilot.onrender.com"), moved.allowedOrigins)
         assertEquals(9090, AppConfig.fromEnv(base + mapOf("PORT" to "10000", "API_PORT" to "9090")).port)
     }
 

@@ -22,7 +22,7 @@ fun ApplicationCall.userId(): UUID =
  */
 fun ApplicationCall.requireSameOrigin(config: AppConfig) {
     val origin = request.headers[HttpHeaders.Origin] ?: return
-    if (origin.trimEnd('/') != config.webBaseUrl) throw ApiException(HttpStatusCode.Forbidden, "Request origin not allowed")
+    if (origin.trimEnd('/') !in config.allowedOrigins) throw ApiException(HttpStatusCode.Forbidden, "Request origin not allowed")
 }
 
 fun ApplicationCall.setSessionCookie(config: AppConfig, token: String, maxAgeSeconds: Int) {
