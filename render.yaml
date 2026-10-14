@@ -15,10 +15,10 @@ services:
       # The Neon connection string, set in the dashboard. sync: false keeps that value on Blueprint syncs.
       - key: DATABASE_URL
         sync: false
-      # Not "prod": there's no email service yet, so sign-in links are shown on screen,
-      # limited to INVITE_EMAILS by the public preview mode.
+      # Set in the dashboard: "preview" (sign-in links also shown on screen) until Resend is set up, then "prod"
+      # (links only emailed; the app won't start without RESEND_API_KEY). sync: false keeps the dashboard value.
       - key: APP_ENV
-        value: preview
+        sync: false
       - key: PUBLIC_PREVIEW
         value: "true"
       - key: SECURE_COOKIES
