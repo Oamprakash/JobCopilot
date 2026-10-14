@@ -46,12 +46,12 @@ Render's free Postgres expires 30 days after creation. Choose one:
 **A. Upgrade on Render (simplest):** Render → the database → upgrade to a paid plan. Nothing else changes.
 
 **B. Move to Neon (has a free tier):**
-1. Create a Neon project: Postgres **17**, region **AWS Asia Pacific (Singapore)** (same region as the app). On the project dashboard, **Connect** → copy the connection string (it starts `postgresql://` and ends `sslmode=require…`).
+1. Create a Neon project on the same Postgres version as Render's database (shown on its page; 18 at the time of writing), region **AWS Asia Pacific (Singapore)** (same region as the app). On the project dashboard, **Connect** → copy the connection string (it starts `postgresql://` and ends `sslmode=require…`).
 2. In Render → the database → **Connect**, copy the **External** connection URL. Save the service's current `DATABASE_URL` value in your notes too, for switching back.
 3. Copy the data with Docker, in PowerShell, from any folder (a quiet hour is best, so nothing is written mid-copy):
    ```powershell
-   docker run --rm -v ${PWD}:/w postgres:17 pg_dump -Fc --no-owner --no-acl -d "RENDER_EXTERNAL_URL" -f /w/jobcopilot.dump
-   docker run --rm -v ${PWD}:/w postgres:17 pg_restore --no-owner --no-acl -d "NEON_URL" /w/jobcopilot.dump
+   docker run --rm -v ${PWD}:/w postgres:18 pg_dump -Fc --no-owner --no-acl -d "RENDER_EXTERNAL_URL" -f /w/jobcopilot.dump
+   docker run --rm -v ${PWD}:/w postgres:18 pg_restore --no-owner --no-acl -d "NEON_URL" /w/jobcopilot.dump
    ```
    Keep the quotes around each URL.
 4. Render → service → **Environment**: replace `DATABASE_URL` with the Neon string and save. The service redeploys.
