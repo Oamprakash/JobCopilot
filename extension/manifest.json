@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TrulyApply",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Fills job applications from your approved TrulyApply application and saves jobs to your tracker. You always click Submit.",
   "action": {
     "default_popup": "popup.html",

@@ -38,7 +38,7 @@ The extension only runs when you click it, on the tab you're on. It needs a free
 **Category:** Workflow & Planning (or Productivity)
 **Language:** English
 
-**Images** (ready in `docs/store-assets/`): icon `extension/icons/128.png`; screenshots `store-1-autofill.png` and `store-2-save.png` (1280×800); small promo tile `store-tile-440x280.png`. The forms and companies in the screenshots are made up.
+**Images** (ready in `docs/store-assets/`): store icon `store-icon-128.png` (96×96 artwork with 16px transparent padding, as Google asks); screenshots `store-1-autofill.png` and `store-2-save.png` (1280×800); small promo tile `store-tile-440x280.png`. The forms and companies in the screenshots are made up.
 
 ## 4. Privacy practices tab
 
