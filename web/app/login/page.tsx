@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { brand } from "@/lib/brand";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Logo } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api } from "@/lib/api";
+import { WaitlistForm } from "@/components/WaitlistForm";
+import { ApiError, api } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,17 +14,26 @@ export default function LoginPage() {
   const [error, setError] = useState<unknown>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [devLink, setDevLink] = useState<string | null>(null);
+  const [notInvited, setNotInvited] = useState(false);
+
+  // Invite emails link here with ?email=, so the address is already filled in.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("email");
+    if (fromLink) setEmail(fromLink);
+  }, []);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setNotInvited(false);
     try {
       const res = await api.requestLink(email);
       setSentTo(email.trim());
       setDevLink(res.devLink ?? null);
     } catch (err) {
-      setError(err);
+      if (err instanceof ApiError && err.status === 403) setNotInvited(true);
+      else setError(err);
     } finally {
       setBusy(false);
     }
@@ -31,11 +41,22 @@ export default function LoginPage() {
 
   return (
     <main className="narrow stack" style={{ gap: 24 }}>
-      <div className="row" style={{ gap: 10, fontWeight: 700, fontSize: 18 }}>
+      <Link href="/" className="brand" style={{ alignSelf: "flex-start" }}>
         <Logo /> {brand.name}
-      </div>
+      </Link>
 
-      {sentTo ? (
+      {notInvited && !sentTo ? (
+        <section className="card stack">
+          <h1>You&apos;re not on the list yet</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            {brand.name} is invite-only during the beta. Join the waitlist and we&apos;ll email you when your spot comes up.
+          </p>
+          <WaitlistForm initialEmail={email} withNote={false} />
+          <button type="button" className="btn btn-ghost" style={{ alignSelf: "flex-start", paddingInline: 0 }} onClick={() => setNotInvited(false)}>
+            Try a different email
+          </button>
+        </section>
+      ) : sentTo ? (
         <section className="card stack">
           <h1>Check your email</h1>
           <p className="muted" style={{ margin: 0 }}>

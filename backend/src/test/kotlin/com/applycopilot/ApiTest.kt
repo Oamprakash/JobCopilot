@@ -1,12 +1,17 @@
 package com.applycopilot
 
+import com.applycopilot.api.JoinWaitlistRequest
+import com.applycopilot.api.JoinWaitlistResponse
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
 import com.applycopilot.api.MeResponse
 import com.applycopilot.api.ProfileResponse
 import com.applycopilot.api.ResumeUploadResponse
 import com.applycopilot.api.SaveProfileRequest
+import com.applycopilot.api.SiteDto
 import com.applycopilot.api.VerifyRequest
+import com.applycopilot.api.WaitlistEntryDto
+import com.applycopilot.api.WaitlistResponse
 import com.applycopilot.config.AppConfig
 import com.applycopilot.core.Preferences
 import com.applycopilot.core.RemoteMode
@@ -97,7 +102,7 @@ class ApiTest {
         )
         val deps = Deps.create(config)
         deps.db.migrate()
-        deps.db.tx { c -> c.createStatement().use { it.execute("TRUNCATE users, magic_link_tokens CASCADE") } }
+        deps.db.tx { c -> c.createStatement().use { it.execute("TRUNCATE users, magic_link_tokens, waitlist CASCADE") } }
         application { module(deps) }
         block(deps)
     }
@@ -158,6 +163,53 @@ class ApiTest {
         val admin = ask("admin@example.com")
         assertEquals(HttpStatusCode.OK, admin.status)
         assertEquals(null, admin.body<MagicLinkResponse>().devLink, "an admin's link is only logged, never shown")
+    }
+
+    @Test
+    fun waitlistLetsStrangersAskAndAdminsInviteThem() = withApp(
+        mapOf("PUBLIC_PREVIEW" to "true", "INVITE_EMAILS" to "friend@example.com", "ADMIN_EMAILS" to "admin@example.com"),
+    ) { deps ->
+        val client = createClient { install(ContentNegotiation) { json(apiJson) } }
+        suspend fun ask(email: String) = client.post("/auth/magic-link") { contentType(ContentType.Application.Json); setBody(MagicLinkRequest(email)) }
+        suspend fun join(email: String, note: String? = null) =
+            client.post("/waitlist") { contentType(ContentType.Application.Json); setBody(JoinWaitlistRequest(email, note)) }.body<JoinWaitlistResponse>().status
+
+        assertTrue(client.get("/site").body<SiteDto>().inviteOnly)
+        assertEquals(HttpStatusCode.Forbidden, ask("stranger@example.com").status)
+        assertEquals("waiting", join(" Stranger@Example.com ", "Android roles in Pune"))
+        assertEquals("waiting", join("stranger@example.com"), "joining twice keeps one entry")
+        assertEquals("invited", join("friend@example.com"), "people on INVITE_EMAILS can already sign in")
+
+        val user = newClient().also { it.signIn("friend@example.com") }
+        assertEquals(HttpStatusCode.Forbidden, user.get("/admin/waitlist").status)
+
+        // In preview mode an admin's sign-in link is only logged, never shown, so take it from the mailer.
+        val admin = newClient()
+        admin.requestLink("admin@example.com")
+        val adminLink = (deps.mailer as com.applycopilot.auth.ConsoleMailer).sent.last().second
+        assertEquals(HttpStatusCode.OK, admin.verify(adminLink.substringAfter("token=")).status)
+        val list = admin.get("/admin/waitlist").body<WaitlistResponse>()
+        assertEquals(1, list.waiting)
+        val entry = list.items.single()
+        assertEquals("stranger@example.com", entry.email)
+        assertEquals("Android roles in Pune", entry.note)
+
+        assertEquals("invited", admin.post("/admin/waitlist/${entry.id}/invite").body<WaitlistEntryDto>().status)
+        val invite = (deps.mailer as com.applycopilot.auth.ConsoleMailer).invites.single()
+        assertEquals("stranger@example.com", invite.first)
+        assertEquals("http://localhost:3000/login?email=stranger%40example.com", invite.second)
+        assertEquals(HttpStatusCode.OK, ask("stranger@example.com").status, "invited from the waitlist, so they can sign in")
+        assertEquals("invited", join("stranger@example.com"))
+
+        assertEquals(HttpStatusCode.OK, admin.delete("/admin/waitlist/${entry.id}").status)
+        assertEquals(0, admin.get("/admin/waitlist").body<WaitlistResponse>().items.size)
+    }
+
+    @Test
+    fun withoutAnInviteListTheWaitlistJustSaysSignIn() = withApp {
+        val client = createClient { install(ContentNegotiation) { json(apiJson) } }
+        assertFalse(client.get("/site").body<SiteDto>().inviteOnly)
+        assertEquals("open", client.post("/waitlist") { contentType(ContentType.Application.Json); setBody(JoinWaitlistRequest("someone@example.com")) }.body<JoinWaitlistResponse>().status)
     }
 
     @Test

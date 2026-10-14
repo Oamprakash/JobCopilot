@@ -30,8 +30,8 @@ fun Route.authRoutes(deps: Deps) {
                 ?: throw ApiException(HttpStatusCode.BadRequest, "Enter a valid email address")
             val isAdmin = email in deps.config.adminEmails
             val preview = deps.config.publicPreview
-            if (preview && !isAdmin && deps.config.inviteEmails.isNotEmpty() && email !in deps.config.inviteEmails) {
-                throw ApiException(HttpStatusCode.Forbidden, "This preview is invite-only. Ask the person who shared it to add your email.")
+            if (!deps.mayRequestLink(email)) {
+                throw ApiException(HttpStatusCode.Forbidden, "${deps.config.appName} is invite-only for now. Join the waitlist and we'll email you when you're in.")
             }
 
             val token = Tokens.newToken()

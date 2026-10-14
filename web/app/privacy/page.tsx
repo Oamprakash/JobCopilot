@@ -41,6 +41,10 @@ export default function PrivacyPage() {
             <td>To run the service, fix problems, prevent abuse and understand which features help. Our administrators can see this for each account; their own access to it is logged.</td>
           </tr>
           <tr>
+            <td>If you join the waitlist: your email and the optional note you add</td>
+            <td>To invite you when there&apos;s room, with one email. Ask us at any time and we&apos;ll remove it.</td>
+          </tr>
+          <tr>
             <td>Feedback you send from the app, with the page you sent it from</td>
             <td>To fix problems and decide what to improve. Only our administrators read it.</td>
           </tr>

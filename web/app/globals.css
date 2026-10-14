@@ -368,3 +368,79 @@ details.notice summary::marker { color: var(--warn); }
 }
 .badge-info { background: var(--primary-soft); color: var(--primary); }
 .badge-plain { background: var(--surface-muted); color: var(--muted); }
+
+/* ---- Public home page -------------------------------------------------------------------------- */
+.landing { --land-max: 1100px; }
+.landing-bar { max-width: var(--land-max); margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.landing-hero {
+  max-width: var(--land-max); margin: 0 auto; padding: 40px 24px 48px;
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 48px; align-items: center;
+}
+.landing-eyebrow { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
+.landing h1 { font-size: clamp(32px, 4.6vw, 48px); line-height: 1.1; letter-spacing: -0.025em; text-wrap: balance; }
+.landing-lede { font-size: 18px; line-height: 1.6; color: var(--muted); margin: 18px 0 28px; max-width: 34em; }
+.landing-cta { max-width: 520px; }
+.waitlist-form { display: flex; flex-direction: column; gap: 10px; }
+.waitlist-row { display: flex; gap: 8px; }
+.waitlist-row .input { flex: 1; min-width: 0; }
+.waitlist-row .btn { flex-shrink: 0; }
+.waitlist-done { padding: 14px 16px; border-radius: var(--radius-sm); background: var(--good-soft); color: var(--good); font-size: 15px; }
+.waitlist-done a { color: inherit; font-weight: 600; }
+
+.landing-preview { position: relative; display: flex; flex-direction: column; gap: 14px; }
+.landing-preview-card { box-shadow: 0 18px 48px rgba(20, 33, 61, .10); }
+.landing-preview-bullet { margin-left: 48px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; border-color: #d6e0ff; background: #f5f8ff; }
+.landing-preview-bullet .bullet-label { color: var(--primary); }
+.landing-check { color: var(--good); font-size: 13px; font-weight: 600; }
+
+.landing-promises {
+  max-width: var(--land-max); margin: 0 auto; padding: 18px 24px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 32px;
+  border-block: 1px solid var(--border); font-weight: 600; font-size: 15px;
+}
+.landing-promises span::before { content: "✓"; color: var(--good); margin-right: 8px; }
+
+.landing-section { max-width: var(--land-max); margin: 0 auto; padding: 64px 24px 0; }
+.landing-section > h2, .landing-wont h2, .landing-final h2 { font-size: clamp(24px, 3vw, 30px); letter-spacing: -0.015em; margin: 0 0 24px; text-wrap: balance; }
+.landing h3 { font-size: 17px; margin: 0 0 6px; }
+.landing-section p { margin: 0; line-height: 1.6; color: var(--muted); }
+
+.landing-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.landing-steps li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+.landing-step-n {
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary-soft); color: var(--primary); font-weight: 700; margin-bottom: 14px;
+}
+.landing-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 32px; }
+.landing-feature { border-top: 2px solid var(--primary); padding-top: 14px; }
+
+.landing-wont { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.landing-wont ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.landing-wont li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px 14px 44px; position: relative; font-weight: 500; }
+.landing-wont li::before { content: "✕"; position: absolute; left: 16px; top: 13px; color: var(--bad); font-weight: 700; }
+
+.landing-faq { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+.landing-faq details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 18px; }
+.landing-faq summary { cursor: pointer; font-weight: 600; padding: 12px 0; min-height: 44px; }
+.landing-faq details p { padding-bottom: 14px; }
+
+.landing-final { max-width: 640px; margin: 72px auto 24px; padding: 40px 24px; text-align: center; }
+.landing-final h2 { margin-bottom: 8px; }
+.landing-final .muted { margin: 0 0 20px; }
+.landing-final .landing-cta { margin: 0 auto; text-align: left; }
+
+@media (max-width: 900px) {
+  .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 24px; }
+  .landing-steps, .landing-features, .landing-wont { grid-template-columns: minmax(0, 1fr); }
+  .landing-features { gap: 20px; }
+}
+@media (max-width: 640px) {
+  .landing-bar { padding: 12px 16px; }
+  .landing-bar-cta { display: none; }
+  .landing-hero, .landing-section { padding-inline: 16px; }
+  .landing-section { padding-top: 48px; }
+  .landing-lede { font-size: 16px; }
+  .waitlist-row { flex-direction: column; }
+  .landing-preview-bullet { margin-left: 16px; }
+  .landing-promises { flex-direction: column; align-items: flex-start; padding-inline: 16px; }
+}
+.landing-preview .job-body { flex-basis: 220px; }

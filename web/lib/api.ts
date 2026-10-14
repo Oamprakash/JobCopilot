@@ -112,6 +112,8 @@ export type AdzunaStatus = {
   lastSyncedAt: string | null;
   lastError: string | null;
 };
+export type WaitlistStatus = "waiting" | "invited" | "open";
+export type WaitlistEntry = { id: string; email: string; note: string | null; status: "waiting" | "invited"; createdAt: string; invitedAt: string | null };
 export type FeedbackKind = "idea" | "problem" | "praise" | "other";
 export type FeedbackItem = {
   id: string;
@@ -375,6 +377,12 @@ export const api = {
   adminUsers: (q: string, offset = 0) =>
     request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
+  site: () => request<{ inviteOnly: boolean }>("/site"),
+  joinWaitlist: (email: string, note?: string) =>
+    request<{ status: WaitlistStatus }>("/waitlist", { method: "POST", body: json({ email, note: note || null }) }),
+  adminWaitlist: () => request<{ items: WaitlistEntry[]; waiting: number; invited: number }>("/admin/waitlist"),
+  inviteFromWaitlist: (id: string) => request<WaitlistEntry>(`/admin/waitlist/${id}/invite`, { method: "POST" }),
+  removeFromWaitlist: (id: string) => request<{ ok: boolean }>(`/admin/waitlist/${id}`, { method: "DELETE" }),
   sendFeedback: (kind: FeedbackKind, message: string, page: string) =>
     request<{ ok: boolean }>("/feedback", { method: "POST", body: json({ kind, message, page }) }),
   adminFeedback: (status?: "new") => request<{ items: FeedbackItem[]; newCount: number }>(`/admin/feedback${status ? `?status=${status}` : ""}`),

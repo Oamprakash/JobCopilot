@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted, type FeedbackItem } from "@/lib/api";
+import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted, type FeedbackItem, type WaitlistEntry } from "@/lib/api";
 import { ago, eventLabels, funnelLabels } from "@/lib/adminFormat";
 import { useMe } from "@/lib/useMe";
 
@@ -98,10 +98,99 @@ export default function AdminPage() {
         )}
 
         {me?.isAdmin && <FeedbackList />}
+        {me?.isAdmin && <WaitlistSection />}
         {me?.isAdmin && <JobSources />}
         {me?.isAdmin && <UsersTable />}
       </main>
     </>
+  );
+}
+
+/** People who asked for access. Invite lets them sign in and emails them; Remove is for deletion requests. */
+function WaitlistSection() {
+  const [items, setItems] = useState<WaitlistEntry[] | null>(null);
+  const [showInvited, setShowInvited] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    api.adminWaitlist().then((r) => setItems(r.items)).catch(setError);
+  }, []);
+
+  async function invite(entry: WaitlistEntry) {
+    setBusyId(entry.id);
+    setError(null);
+    try {
+      const updated = await api.inviteFromWaitlist(entry.id);
+      setItems((list) => (list ?? []).map((i) => (i.id === entry.id ? updated : i)));
+    } catch (e) {
+      setError(e);
+      // A failed email still leaves them invited; reload to show the real state.
+      api.adminWaitlist().then((r) => setItems(r.items)).catch(() => undefined);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(entry: WaitlistEntry) {
+    if (!window.confirm(`Remove ${entry.email} from the waitlist?`)) return;
+    try {
+      await api.removeFromWaitlist(entry.id);
+      setItems((list) => (list ?? []).filter((i) => i.id !== entry.id));
+    } catch (e) {
+      setError(e);
+    }
+  }
+
+  const waiting = (items ?? []).filter((i) => i.status === "waiting");
+  const invited = (items ?? []).filter((i) => i.status === "invited");
+  const shown = showInvited ? invited : waiting;
+
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h2>Waitlist{waiting.length > 0 ? ` (${waiting.length} waiting)` : ""}</h2>
+        <nav className="tabs" aria-label="Waitlist filter" style={{ border: 0 }}>
+          <button type="button" className="tab" aria-pressed={!showInvited} onClick={() => setShowInvited(false)}>Waiting</button>
+          <button type="button" className="tab" aria-pressed={showInvited} onClick={() => setShowInvited(true)}>
+            Invited<span className="tab-count">{invited.length}</span>
+          </button>
+        </nav>
+      </div>
+      <Problems error={error} />
+      {!items ? (
+        <p className="muted small" style={{ margin: 0 }}>Loading…</p>
+      ) : shown.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>
+          {showInvited ? "Nobody invited from the waitlist yet." : "Nobody waiting. People who aren't invited can join from the home page or the sign-in page."}
+        </p>
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {shown.map((w) => (
+            <li key={w.id} className="feedback-item">
+              <div className="row" style={{ justifyContent: "space-between", gap: 8 }}>
+                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <strong style={{ overflowWrap: "anywhere" }}>{w.email}</strong>
+                  <span className="muted small">
+                    {w.status === "invited" && w.invitedAt ? `Invited ${ago(w.invitedAt)} · joined ${ago(w.createdAt)}` : `Joined ${ago(w.createdAt)}`}
+                  </span>
+                  {w.note && <span className="small">&ldquo;{w.note}&rdquo;</span>}
+                </div>
+                <div className="row" style={{ gap: 4 }}>
+                  {w.status === "waiting" && (
+                    <button type="button" className="btn btn-primary" disabled={busyId === w.id} onClick={() => invite(w)}>
+                      {busyId === w.id ? "Inviting…" : "Invite"}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-ghost small" onClick={() => remove(w)}>Remove</button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted small" style={{ margin: 0 }}>Invite lets them sign in straight away and sends them one email with a sign-in button.</p>
+    </section>
   );
 }
 

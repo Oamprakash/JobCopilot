@@ -25,6 +25,9 @@ interface Mailer {
     /** One email listing the applications due a follow-up ("title" to "company"), linking to the tracker. */
     suspend fun sendFollowUps(email: String, items: List<Pair<String, String>>, trackerLink: String)
 
+    /** "You're in": [email] was invited from the waitlist; [loginLink] opens the sign-in page with the email filled in. */
+    suspend fun sendInvite(email: String, loginLink: String)
+
     /** The daily match email: the best [items] of [total] new matches. */
     suspend fun sendDigest(email: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String)
 }
@@ -60,6 +63,13 @@ class ConsoleMailer : Mailer {
         log.info("Magic link for {}: {}", email, link)
     }
 
+    val invites = mutableListOf<Pair<String, String>>()
+
+    override suspend fun sendInvite(email: String, loginLink: String) {
+        invites += email to loginLink
+        log.info("Invite for {}: {}", email, loginLink)
+    }
+
     val followUps = mutableListOf<Pair<String, List<Pair<String, String>>>>()
     val digests = mutableListOf<Triple<String, List<DigestItem>, String>>()
 
@@ -89,6 +99,9 @@ class ResendMailer(private val http: HttpClient, private val config: MailConfig)
 
     override suspend fun sendFollowUps(email: String, items: List<Pair<String, String>>, trackerLink: String) =
         send(email, EmailTemplates.followUps(config.appName, items, trackerLink))
+
+    override suspend fun sendInvite(email: String, loginLink: String) =
+        send(email, EmailTemplates.invite(config.appName, loginLink))
 
     private suspend fun send(to: String, content: EmailContent, headers: Map<String, String> = emptyMap()) {
         val body = buildJsonObject {

@@ -41,6 +41,29 @@ object EmailTemplates {
         )
     }
 
+    fun invite(appName: String, loginLink: String): EmailContent {
+        val site = siteOf(loginLink)
+        val body = heading("You're in") +
+            paragraph("Your spot on the $appName waitlist came up. You can sign in now: no password, just your email.") +
+            button("Sign in to $appName", loginLink) +
+            paragraph("Once you're in, upload your resume and set the roles and cities you want. Your first matches arrive in a minute, then a short email with new ones each morning.") +
+            divider() +
+            paragraph("You're getting this because you joined the waitlist. Didn't? You can ignore this email.", small = true)
+        return EmailContent(
+            subject = "You're invited to $appName",
+            html = layout(appName, site, preheader = "Your spot came up. Sign in to get started.", body = body,
+                footer = "Sent once, because you asked to join $appName."),
+            text = """
+                You're in
+
+                Your spot on the $appName waitlist came up. Sign in here (no password, just your email):
+                $loginLink
+
+                You're getting this because you joined the waitlist. Didn't? You can ignore this email.
+            """.trimIndent(),
+        )
+    }
+
     fun digest(appName: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String): EmailContent {
         val site = siteOf(feedLink)
         val intro = if (total == 1) "One new job fits your profile today." else "$total new jobs fit your profile today. Here are the best ${items.size}."

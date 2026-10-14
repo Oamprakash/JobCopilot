@@ -2,6 +2,8 @@ package com.applycopilot
 
 import com.applycopilot.api.digestRoutes
 import com.applycopilot.api.feedbackRoutes
+import com.applycopilot.api.waitlistAdminRoutes
+import com.applycopilot.api.waitlistPublicRoutes
 import com.applycopilot.jobs.FollowUpReminders
 import com.applycopilot.api.extensionRoutes
 import com.applycopilot.api.extensionPairingRoutes
@@ -109,6 +111,7 @@ fun Application.module(deps: Deps) {
         extensionRoutes(deps)
         // The daily email's unsubscribe link works without signing in; it's signed per user instead.
         digestRoutes(deps)
+        waitlistPublicRoutes(deps)
         authenticate(SESSION_AUTH) {
             accountRoutes(deps)
             resumeRoutes(deps)
@@ -117,6 +120,7 @@ fun Application.module(deps: Deps) {
             adminRoutes(deps)
             adminDashboardRoutes(deps)
             feedbackRoutes(deps)
+            waitlistAdminRoutes(deps)
             trackerRoutes(deps)
             extensionPairingRoutes(deps)
         }
