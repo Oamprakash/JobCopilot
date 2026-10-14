@@ -76,71 +76,28 @@ class ConsoleMailer : Mailer {
 
 /** Sends through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email). */
 class ResendMailer(private val http: HttpClient, private val config: MailConfig) : Mailer {
-    override suspend fun sendMagicLink(email: String, link: String) {
-        val body = buildJsonObject {
-            put("from", config.from)
-            putJsonArray("to") { add(email) }
-            put("subject", "Your ${config.appName} sign-in link")
-            put("text", "Sign in to ${config.appName}:\n\n$link\n\nThe link works once and expires in 15 minutes. If you didn't ask for it, ignore this email.")
-            put(
-                "html",
-                """<p>Sign in to ${config.appName}:</p><p><a href="$link">Sign in</a></p>""" +
-                    "<p>The link works once and expires in 15 minutes. If you didn't ask for it, ignore this email.</p>",
-            )
-        }
-        val response = http.post("https://api.resend.com/emails") {
-            bearerAuth(config.resendApiKey)
-            contentType(ContentType.Application.Json)
-            setBody(body.toString())
-        }
-        check(response.status.isSuccess()) { "Resend returned ${response.status}: ${response.bodyAsText().take(300)}" }
-    }
+    override suspend fun sendMagicLink(email: String, link: String) =
+        send(email, EmailTemplates.magicLink(config.appName, link))
 
-    override suspend fun sendDigest(email: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String) {
-        fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
-        val rows = items.joinToString("") { i ->
-            """<li style="margin:0 0 12px"><a href="${esc(i.link)}" style="font-weight:600;color:#1f4fe0">${esc(i.title)}</a><br>""" +
-                """<span style="color:#5b6478">${esc(i.company)}${if (i.location.isNotBlank()) " · " + esc(i.location) else ""} · fit ${i.score}</span></li>"""
-        }
-        val body = buildJsonObject {
-            put("from", config.from)
-            putJsonArray("to") { add(email) }
-            put("subject", digestSubject(total))
-            put("text", digestText(items, total, feedLink, unsubscribeLink))
-            put(
-                "html",
-                "<p>${if (total == 1) "One new job fits your profile:" else "$total new jobs fit your profile. The best ${items.size}:"}</p>" +
-                    """<ul style="padding-left:18px">$rows</ul><p><a href="${esc(feedLink)}">See all your matches</a></p>""" +
-                    """<p style="color:#5b6478;font-size:12px">You get this once a day when there are new matches. <a href="${esc(unsubscribeLink)}">Unsubscribe</a> or change it in Preferences.</p>""",
-            )
-            // One-click unsubscribe (RFC 8058), which mail apps show as an Unsubscribe button.
-            putJsonObject("headers") {
-                put("List-Unsubscribe", "<$unsubscribeLink>")
-                put("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
-            }
-        }
-        val response = http.post("https://api.resend.com/emails") {
-            bearerAuth(config.resendApiKey)
-            contentType(ContentType.Application.Json)
-            setBody(body.toString())
-        }
-        check(response.status.isSuccess()) { "Resend returned ${response.status}: ${response.bodyAsText().take(300)}" }
-    }
+    override suspend fun sendDigest(email: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String) =
+        // One-click unsubscribe (RFC 8058), which mail apps show as an Unsubscribe button.
+        send(
+            email,
+            EmailTemplates.digest(config.appName, items, total, feedLink, unsubscribeLink),
+            headers = mapOf("List-Unsubscribe" to "<$unsubscribeLink>", "List-Unsubscribe-Post" to "List-Unsubscribe=One-Click"),
+        )
 
-    override suspend fun sendFollowUps(email: String, items: List<Pair<String, String>>, trackerLink: String) {
-        fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    override suspend fun sendFollowUps(email: String, items: List<Pair<String, String>>, trackerLink: String) =
+        send(email, EmailTemplates.followUps(config.appName, items, trackerLink))
+
+    private suspend fun send(to: String, content: EmailContent, headers: Map<String, String> = emptyMap()) {
         val body = buildJsonObject {
             put("from", config.from)
-            putJsonArray("to") { add(email) }
-            put("subject", if (items.size == 1) "Time to follow up: ${items[0].first} at ${items[0].second}" else "${items.size} applications to follow up on")
-            put("text", followUpText(items, trackerLink))
-            put(
-                "html",
-                "<p>${if (items.size == 1) "One application is" else "${items.size} applications are"} due a follow-up:</p><ul>" +
-                    items.joinToString("") { (t, co) -> "<li>${esc(t)} at ${esc(co)}</li>" } +
-                    "</ul><p>A short, polite note to the recruiter or hiring manager keeps you on their radar.</p>" +
-                    """<p><a href="$trackerLink">Open your tracker</a></p>""",
-            )
+            putJsonArray("to") { add(to) }
+            put("subject", content.subject)
+            put("html", content.html)
+            put("text", content.text)
+            if (headers.isNotEmpty()) putJsonObject("headers") { headers.forEach { (k, v) -> put(k, v) } }
         }
         val response = http.post("https://api.resend.com/emails") {
             bearerAuth(config.resendApiKey)
