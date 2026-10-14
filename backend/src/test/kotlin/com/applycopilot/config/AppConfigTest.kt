@@ -21,6 +21,16 @@ class AppConfigTest {
     }
 
     @Test
+    fun acceptsNeonConnectionStrings() {
+        assertEquals(
+            Triple("jdbc:postgresql://ep-cool-river-a1b2c3.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require", "neondb_owner", "npg_secret"),
+            AppConfig.database(
+                mapOf("DATABASE_URL" to "postgresql://neondb_owner:npg_secret@ep-cool-river-a1b2c3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"),
+            ),
+        )
+    }
+
+    @Test
     fun webBaseUrlFallsBackToTheHostsPublicAddress() {
         val base = mapOf("APP_ENV" to "test")
         assertEquals("https://jobcopilot.onrender.com", AppConfig.fromEnv(base + ("RENDER_EXTERNAL_URL" to "https://jobcopilot.onrender.com/")).webBaseUrl)

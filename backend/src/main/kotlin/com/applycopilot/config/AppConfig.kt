@@ -110,7 +110,9 @@ data class AppConfig(
                 val (user, password) = (uri.rawUserInfo ?: "").split(":", limit = 2).map { java.net.URLDecoder.decode(it, Charsets.UTF_8) }
                     .let { it.getOrElse(0) { "" } to it.getOrElse(1) { "" } }
                 val port = if (uri.port == -1) 5432 else uri.port
-                val query = uri.rawQuery?.let { "?$it" }.orEmpty()
+                // libpq-only settings the JDBC driver doesn't take (Neon's URLs add channel_binding).
+                val query = uri.rawQuery?.split("&")?.filter { it.isNotEmpty() && !it.startsWith("channel_binding=") }
+                    ?.takeIf { it.isNotEmpty() }?.joinToString("&", prefix = "?").orEmpty()
                 return Triple(
                     "jdbc:postgresql://${uri.host}:$port${uri.rawPath}$query",
                     env["DATABASE_USER"]?.takeIf { it.isNotBlank() } ?: user,

@@ -19,6 +19,11 @@ class Db(url: String, user: String, password: String) : Closeable {
             username = user
             this.password = password
             maximumPoolSize = 10
+            // Close connections nobody is using, so a database that sleeps when idle (Neon) can go to sleep.
+            // The app's own hourly jobs wake it briefly; a request after a quiet spell waits about a second.
+            minimumIdle = 0
+            idleTimeout = 60_000
+            keepaliveTime = 0
             isAutoCommit = false
         },
     )
