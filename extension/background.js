@@ -1,5 +1,5 @@
 /*
- * Apply Copilot extension service worker: holds the connection to your Apply Copilot account and makes every
+ * TrulyApply extension service worker: holds the connection to your TrulyApply account and makes every
  * API call, so the token never reaches web pages.
  */
 "use strict";

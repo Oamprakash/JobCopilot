@@ -1,4 +1,4 @@
-# Apply Copilot
+# TrulyApply
 
 AI job-application copilot: finds well-matched jobs, tailors each application, and autofills forms, while the user always clicks Submit.
 
@@ -72,7 +72,7 @@ Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","bo
 
 1. Get the code: download the repository (or `git pull`) so you have the `extension` folder.
 2. In Chrome, open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the `extension` folder.
-3. Pin Apply Copilot from the puzzle-piece menu.
+3. Pin TrulyApply from the puzzle-piece menu.
 4. In the app, open Profile → **Browser extension** → **Connect the extension**. In the extension popup, enter the app's address (e.g. `https://jobcopilot.onrender.com` or `http://localhost:3000`) and the code.
 
 On an application form, click the extension and **Autofill this application**, review every field, then click the site's Submit yourself. After a `git pull`, click the reload icon on the extension's card in `chrome://extensions`.

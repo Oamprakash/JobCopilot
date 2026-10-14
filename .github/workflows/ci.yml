@@ -107,7 +107,7 @@ jobs:
           fail() { echo "::error title=Render image::$1"; exit 1; }
           for i in $(seq 1 90); do curl -fsS http://localhost:10000/api/health >/dev/null 2>&1 && break; sleep 2; done
           curl -fsS http://localhost:10000/api/health | grep -q ok || fail "API health through the web app did not answer"
-          curl -fsS http://localhost:10000/login | grep -q "Apply Copilot" || fail "Login page did not render"
+          curl -fsS http://localhost:10000/login | grep -q "TrulyApply" || fail "Login page did not render"
           code=$(curl -s -o /tmp/ml.json -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
             -H 'Content-Type: application/json' -H 'Origin: http://localhost:10000' -d '{"email":"friend@example.com"}')
           test "$code" = 200 || fail "magic-link returned $code: $(head -c 300 /tmp/ml.json)"

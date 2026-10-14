@@ -1,5 +1,5 @@
 /*
- * Fills the application form in this frame from Apply Copilot data. Injected on demand by the extension popup
+ * Fills the application form in this frame from TrulyApply data. Injected on demand by the extension popup
  * (after lib/match.js). Fills empty fields only, highlights what it filled, and never clicks or submits anything.
  */
 (function () {

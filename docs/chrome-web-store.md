@@ -1,12 +1,12 @@
 # Publishing the extension on the Chrome Web Store
 
-Everything Google asks for, ready to paste. Replace "Apply Copilot" with the final app name (and update `extension/manifest.json`'s `name`) before submitting.
+Everything Google asks for, ready to paste. The privacy policy URL is `https://trulyapply.com/privacy`.
 
 ## 1. One-time setup
 
 1. Sign in at the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) with the Google account that will own the listing.
 2. Pay the one-time US$5 registration fee and verify your contact email.
-3. Have your live privacy policy URL ready: `https://<your-domain>/privacy`.
+3. Have your live privacy policy URL ready: `https://trulyapply.com/privacy`.
 
 ## 2. The package
 
@@ -20,20 +20,20 @@ Upload it under **Package → Upload new package**. Bump `version` in `manifest.
 
 ## 3. Store listing
 
-**Name:** Apply Copilot
+**Name:** TrulyApply
 
 **Summary (up to 132 characters):**
 Fill job applications from your reviewed, tailored application and save jobs to your tracker. You always click Submit.
 
 **Description:**
-Apply Copilot's extension saves you retyping the same details into every job application, without sending anything on your behalf.
+TrulyApply's extension saves you retyping the same details into every job application, without sending anything on your behalf.
 
-• Autofill: on Greenhouse, Lever, Ashby and Workday application forms, fill your name, contact details, links, current role, cover letter and the answers you approved in Apply Copilot, and attach your tailored resume.
+• Autofill: on Greenhouse, Lever, Ashby and Workday application forms, fill your name, contact details, links, current role, cover letter and the answers you approved in TrulyApply, and attach your tailored resume.
 • Honest by design: only fields you've left empty are filled, from facts in your own profile. Pay, visa and demographic questions are always left to you, and every filled field is highlighted so you can check it.
 • You stay in control: the extension never clicks Submit. You review the form and submit it yourself.
-• Save any job: one click adds the job you're looking at to your Apply Copilot tracker, with follow-up reminders.
+• Save any job: one click adds the job you're looking at to your TrulyApply tracker, with follow-up reminders.
 
-The extension only runs when you click it, on the tab you're on. It needs a free Apply Copilot account; connect it with a one-time code from your profile.
+The extension only runs when you click it, on the tab you're on. It needs a free TrulyApply account; connect it with a one-time code from your profile.
 
 **Category:** Workflow & Planning (or Productivity)
 **Language:** English
@@ -43,7 +43,7 @@ The extension only runs when you click it, on the tab you're on. It needs a free
 ## 4. Privacy practices tab
 
 **Single purpose:**
-Helps the user complete job applications they have prepared in Apply Copilot: fills the application form on the current page from the user's own profile and approved application, and saves the current job posting to the user's tracker.
+Helps the user complete job applications they have prepared in TrulyApply: fills the application form on the current page from the user's own profile and approved application, and saves the current job posting to the user's tracker.
 
 **Permission justifications:**
 
@@ -53,7 +53,7 @@ Helps the user complete job applications they have prepared in Apply Copilot: fi
 | `scripting` | Inject the form-filling and job-reading scripts into that tab when the user clicks a button in the popup. |
 | `storage` | Keep the app's address and the sign-in token that connects the extension to the user's own account. |
 | Host permissions: `boards.greenhouse.io`, `job-boards.greenhouse.io`, `jobs.lever.co`, `jobs.ashbyhq.com`, `*.myworkdayjobs.com` | Application forms on these hiring platforms are often embedded in an employer's careers page; the extension needs access to fill a form inside that embedded frame when the user clicks Autofill. |
-| Optional host permissions (`https://*/*`, `http://localhost/*`) | Requested once, for only the Apply Copilot address the user enters when connecting, so the extension can reach the user's own account. |
+| Optional host permissions (`https://*/*`, `http://localhost/*`) | Requested once, for only the TrulyApply address the user enters when connecting, so the extension can reach the user's own account. |
 
 **Remote code:** No, I am not using remote code. (All scripts are in the package; the API returns data only.)
 

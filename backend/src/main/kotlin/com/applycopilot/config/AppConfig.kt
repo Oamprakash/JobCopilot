@@ -5,7 +5,7 @@ import com.applycopilot.jobs.AdzunaConfig
 /** An S3-compatible bucket for uploaded files, e.g. Cloudflare R2 (endpoint https://<account>.r2.cloudflarestorage.com). */
 data class ObjectStorageConfig(val endpoint: String, val bucket: String, val accessKeyId: String, val secretAccessKey: String, val region: String = "auto")
 
-data class MailConfig(val resendApiKey: String, val from: String, val appName: String = "Apply Copilot")
+data class MailConfig(val resendApiKey: String, val from: String, val appName: String = "TrulyApply")
 
 data class AppConfig(
     /** "dev", "test" or "prod". Outside prod, magic links are logged and returned in the API response. */
@@ -43,7 +43,7 @@ data class AppConfig(
     val digestHour: Int = 8,
     val digestTimeZone: String = "Asia/Kolkata",
     /** The product's name in emails and messages (APP_NAME). */
-    val appName: String = "Apply Copilot",
+    val appName: String = "TrulyApply",
     /** Activity events (admin dashboard) are kept this many days. */
     val eventRetentionDays: Int = 180,
     /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
@@ -61,9 +61,9 @@ data class AppConfig(
             }
             require(jwtSecret.length >= 32) { "JWT_SECRET must be at least 32 characters" }
 
-            val appName = env["APP_NAME"]?.trim()?.takeIf { it.isNotEmpty() } ?: "Apply Copilot"
+            val appName = env["APP_NAME"]?.trim()?.takeIf { it.isNotEmpty() } ?: "TrulyApply"
             val mail = env["RESEND_API_KEY"]?.takeIf { it.isNotBlank() }?.let {
-                MailConfig(resendApiKey = it, from = env["MAIL_FROM"] ?: "$appName <login@example.com>", appName = appName)
+                MailConfig(resendApiKey = it, from = env["MAIL_FROM"] ?: "$appName <login@trulyapply.com>", appName = appName)
             }
             if (appEnv == "prod") requireNotNull(mail) { "RESEND_API_KEY is required in prod so magic links can be emailed" }
 

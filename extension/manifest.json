@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Apply Copilot",
-  "version": "0.4.1",
-  "description": "Fills job applications from your approved Apply Copilot application and saves jobs to your tracker. You always click Submit.",
+  "name": "TrulyApply",
+  "version": "0.5.0",
+  "description": "Fills job applications from your approved TrulyApply application and saves jobs to your tracker. You always click Submit.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Apply Copilot",
+    "default_title": "TrulyApply",
     "default_icon": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
   },
   "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },

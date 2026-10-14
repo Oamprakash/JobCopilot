@@ -1,16 +1,10 @@
 # Launch checklist
 
-Moving from the free preview on Render to a public launch on your own domain. Do the steps in order; each ends with how to check it worked. "Your domain" below means the one you bought (e.g. `trulyapply.com`).
+Moving from the free preview on Render to a public launch on your own domain. Do the steps in order; each ends with how to check it worked. "Your domain" below means the one you bought (`trulyapply.com`).
 
-## 0. Rename the app (5 minutes)
+## 0. Rename the app (done: TrulyApply)
 
-Change the name in three places and push:
-
-- `web/lib/brand.ts`: `name`, `operator` (you or your business, as it should appear in the privacy policy), `contactEmail` (e.g. `privacy@yourdomain.com`), `jurisdiction`.
-- Render → service → Environment: `APP_NAME` (used in emails).
-- `extension/manifest.json`: `name` (the popup and messages read it from there).
-
-**Check:** the header, sign-in page, `/privacy` and `/terms` show the new name and contact email.
+The app is named TrulyApply (`web/lib/brand.ts`, the API's default `APP_NAME`, `extension/manifest.json`), with `hello@trulyapply.com` as the contact address. To rename again, change those three places and set `APP_NAME` on Render.
 
 ## 1. Domain (Cloudflare Registrar)
 

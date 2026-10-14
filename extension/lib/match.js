@@ -1,5 +1,5 @@
 /*
- * Field matching for Apply Copilot's autofill: decides what a form field asks for from its label, name, id,
+ * Field matching for TrulyApply's autofill: decides what a form field asks for from its label, name, id,
  * placeholder and similar hints, and finds the tailored answer for a free-text question.
  * Plain script (no imports) so it can be injected into pages; also loads in Node for tests.
  */
