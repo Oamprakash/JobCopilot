@@ -4,6 +4,7 @@ import { brand } from "@/lib/brand";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { FeedbackButton } from "./FeedbackButton";
 
 export function Logo() {
   return (
@@ -47,6 +48,7 @@ export function AppHeader({ email, isAdmin }: { email?: string; isAdmin?: boolea
           )}
         </nav>
         {email && <span className="small muted header-email">{email}</span>}
+        <FeedbackButton />
         <button type="button" className="btn btn-ghost header-signout" onClick={signOut}>
           Sign out
         </button>

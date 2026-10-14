@@ -112,6 +112,17 @@ export type AdzunaStatus = {
   lastSyncedAt: string | null;
   lastError: string | null;
 };
+export type FeedbackKind = "idea" | "problem" | "praise" | "other";
+export type FeedbackItem = {
+  id: string;
+  userId: string;
+  email: string;
+  kind: FeedbackKind;
+  message: string;
+  page: string | null;
+  status: "new" | "done";
+  createdAt: string;
+};
 export type AdminUser = {
   id: string;
   email: string;
@@ -364,6 +375,11 @@ export const api = {
   adminUsers: (q: string, offset = 0) =>
     request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
+  sendFeedback: (kind: FeedbackKind, message: string, page: string) =>
+    request<{ ok: boolean }>("/feedback", { method: "POST", body: json({ kind, message, page }) }),
+  adminFeedback: (status?: "new") => request<{ items: FeedbackItem[]; newCount: number }>(`/admin/feedback${status ? `?status=${status}` : ""}`),
+  setFeedbackStatus: (id: string, status: "new" | "done") =>
+    request<{ ok: boolean }>(`/admin/feedback/${id}`, { method: "PUT", body: json({ status }) }),
   adzunaStatus: () => request<AdzunaStatus>("/admin/sources/adzuna"),
   setAdzuna: (enabled: boolean) => request<AdzunaStatus>("/admin/sources/adzuna", { method: "PUT", body: json({ enabled }) }),
 

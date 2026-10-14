@@ -66,6 +66,7 @@ Adding a board: `POST /api/admin/companies {"name":"Acme","ats":"greenhouse","bo
 | Area | What it does |
 | --- | --- |
 | Daily match email | Each morning (`DIGEST_HOUR`, default 8, in `DIGEST_TIMEZONE`, default Asia/Kolkata) every user with a profile gets up to 5 of their best new matches (score 40+) scored since their last email, with a count of the rest and links to review each. No new matches, no email. On by default; off under Preferences or with the one-click unsubscribe link (signed per user; `List-Unsubscribe` headers for mail apps). Checked hourly, so a restart never sends twice. |
+| Feedback | **Feedback** in the header on every signed-in page: pick a kind (something's broken, an idea, something I like, other), write a message, send. The page it came from is attached (our own path only). Admin → **Feedback** lists it newest first with the sender (linked to their activity), filterable by New, with Mark done. Stored in `feedback` (V14), deleted with the account. |
 | Interview prep | Tracker → **Interview prep** on an applied or interviewing job: up to 10 likely questions (about you, the job's skills, gaps, leadership, the company), each with why it's asked, a tip, and talking points that are your own resume bullets, word for word. Skills the job asks for that your profile lacks are listed so you can prepare an honest answer. Uses Claude when `ANTHROPIC_API_KEY` is set (rule-based otherwise or on failure); whatever Claude writes passes the same claim guard as tailoring. 10 a day per user. |
 
 ### Install the extension
@@ -172,6 +173,8 @@ All routes except `/health` and `/auth/*` need the session cookie. In the browse
 | | `/ext/*` | the extension's API (bearer token): `pair`, `me`, `autofill?url=&jobId=`, `applications/{jobId}/resume.pdf`, `save`, `applied` |
 | POST | `/events` | `{type: "job_opened"\|"apply_clicked", jobId}`: link clicks the browser reports |
 | PUT | `/admin/companies/{id}/active` | `{active}` (admins) |
+| POST | `/feedback` | `{kind: idea\|problem\|praise\|other, message, page?}` from the header's Feedback button (20 a day per user) |
+| GET/PUT | `/admin/feedback?status=new`, `/admin/feedback/{id}` | feedback list with new count / `{status: new\|done}` (admins) |
 | GET/PUT | `/admin/sources/adzuna` | Adzuna status / `{enabled}`: the Admin page's switch. Off: no Adzuna calls, and its jobs leave New matches and daily emails (admins) |
 | POST | `/admin/ingest` | sync every active board now (admins) |
 | POST | `/applications/{jobId}/tailor` | `{questions?, jobDescription?}` → draft (creates or regenerates); `jobDescription` replaces the job's text for this application, `""` clears it |

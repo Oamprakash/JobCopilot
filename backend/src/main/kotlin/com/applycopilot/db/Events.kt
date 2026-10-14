@@ -33,6 +33,7 @@ object EventTypes {
     const val DIGEST_SENT = "digest_sent"
     const val DIGEST_UNSUBSCRIBED = "digest_unsubscribed"
     const val INTERVIEW_PREP = "interview_prep"
+    const val FEEDBACK_SENT = "feedback_sent"
     /** Audit trail: an admin opened a user's activity. Recorded against the admin. */
     const val ADMIN_VIEWED_USER = "admin_viewed_user"
 

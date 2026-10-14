@@ -23,6 +23,7 @@ export const eventLabels: Record<string, string> = {
   digest_sent: "Daily match emails sent",
   digest_unsubscribed: "Daily email unsubscribes",
   interview_prep: "Interview preps",
+  feedback_sent: "Feedback sent",
 };
 
 export const funnelLabels: [string, string][] = [
@@ -85,6 +86,8 @@ export function describe(e: AdminEvent): string {
       return d.from ? `Moved ${job} from ${d.from} to ${d.stage}` : `Added ${job} to the tracker as ${d.stage}`;
     case "digest_sent":
       return `Was emailed ${d.jobs ?? "some"} new match${d.jobs === 1 ? "" : "es"}`;
+    case "feedback_sent":
+      return `Sent feedback (${d.kind === "problem" ? "something broken" : d.kind ?? "other"})`;
     case "digest_unsubscribed":
       return "Unsubscribed from the daily match email";
     case "interview_prep":

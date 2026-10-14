@@ -40,6 +40,10 @@ export default function PrivacyPage() {
             <td>Activity in the app: sign-ins, searches you save, feed refreshes, jobs you open, save or skip, applications you tailor, approve or download, clicks through to apply, interview preps, match emails sent and unsubscribes, and use of the browser extension</td>
             <td>To run the service, fix problems, prevent abuse and understand which features help. Our administrators can see this for each account; their own access to it is logged.</td>
           </tr>
+          <tr>
+            <td>Feedback you send from the app, with the page you sent it from</td>
+            <td>To fix problems and decide what to improve. Only our administrators read it.</td>
+          </tr>
           <tr><td>A session cookie</td><td>To keep you signed in (30 days). It is the only cookie we set. We use no advertising or third-party tracking cookies.</td></tr>
         </tbody>
       </table>

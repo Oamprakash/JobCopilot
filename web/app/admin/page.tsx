@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted } from "@/lib/api";
+import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted, type FeedbackItem } from "@/lib/api";
 import { ago, eventLabels, funnelLabels } from "@/lib/adminFormat";
 import { useMe } from "@/lib/useMe";
 
@@ -97,10 +97,88 @@ export default function AdminPage() {
           </>
         )}
 
+        {me?.isAdmin && <FeedbackList />}
         {me?.isAdmin && <JobSources />}
         {me?.isAdmin && <UsersTable />}
       </main>
     </>
+  );
+}
+
+const feedbackKinds: Record<string, { label: string; tone: string }> = {
+  problem: { label: "Something's broken", tone: "badge-warn" },
+  idea: { label: "Idea", tone: "badge-info" },
+  praise: { label: "Likes", tone: "badge-good" },
+  other: { label: "Other", tone: "badge-plain" },
+};
+
+/** What users sent with the Feedback button, newest first. New ones first by default; mark them done once handled. */
+function FeedbackList() {
+  const [showAll, setShowAll] = useState(false);
+  const [items, setItems] = useState<FeedbackItem[] | null>(null);
+  const [newCount, setNewCount] = useState(0);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    setItems(null);
+    api
+      .adminFeedback(showAll ? undefined : "new")
+      .then((r) => {
+        setItems(r.items);
+        setNewCount(r.newCount);
+      })
+      .catch(setError);
+  }, [showAll]);
+
+  async function mark(item: FeedbackItem, status: "new" | "done") {
+    try {
+      await api.setFeedbackStatus(item.id, status);
+      setNewCount((n) => n + (status === "done" ? -1 : 1));
+      setItems((list) => (list ?? []).flatMap((i) => (i.id !== item.id ? [i] : showAll ? [{ ...i, status }] : [])));
+    } catch (e) {
+      setError(e);
+    }
+  }
+
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h2>Feedback{newCount > 0 ? ` (${newCount} new)` : ""}</h2>
+        <nav className="tabs" aria-label="Feedback filter" style={{ border: 0 }}>
+          <button type="button" className="tab" aria-pressed={!showAll} onClick={() => setShowAll(false)}>New</button>
+          <button type="button" className="tab" aria-pressed={showAll} onClick={() => setShowAll(true)}>All</button>
+        </nav>
+      </div>
+      <Problems error={error} />
+      {!items ? (
+        <p className="muted small" style={{ margin: 0 }}>Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>
+          {showAll ? "No feedback yet. It arrives here when someone uses the Feedback button." : "Nothing new. Switch to All to see handled feedback."}
+        </p>
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {items.map((f) => {
+            const k = feedbackKinds[f.kind] ?? feedbackKinds.other;
+            return (
+              <li key={f.id} className={`feedback-item${f.status === "done" ? " done" : ""}`}>
+                <div className="row small" style={{ gap: 8 }}>
+                  <span className={`badge ${k.tone}`}>{k.label}</span>
+                  <Link href={`/admin/users/${f.userId}`}>{f.email}</Link>
+                  <span className="muted">{ago(f.createdAt)}{f.page ? ` · on ${f.page}` : ""}</span>
+                </div>
+                <p className="feedback-message">{f.message}</p>
+                <div>
+                  <button type="button" className="btn btn-ghost small" style={{ paddingInline: 0, minHeight: 32 }} onClick={() => mark(f, f.status === "new" ? "done" : "new")}>
+                    {f.status === "new" ? "Mark done" : "Mark as new"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 

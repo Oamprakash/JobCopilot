@@ -9,6 +9,9 @@ import com.applycopilot.api.CountedValueDto
 import com.applycopilot.api.AdzunaStatusDto
 import com.applycopilot.api.EnabledRequest
 import com.applycopilot.api.FeedResponse
+import com.applycopilot.api.FeedbackListResponse
+import com.applycopilot.api.FeedbackRequest
+import com.applycopilot.api.FeedbackStatusRequest
 import com.applycopilot.api.JobDetailDto
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
@@ -54,6 +57,7 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FeedApiTest {
@@ -472,5 +476,30 @@ class FeedApiTest {
         assertTrue((city["Bengaluru"] ?: 0) >= 1)
         assertTrue((city["Chennai"] ?: 0) >= 1)
         assertTrue(options.roles.first { it.value == "Android Engineer" }.count >= 2)
+    }
+
+    @Test
+    fun feedbackReachesAdminsOnly() = withApp { _ ->
+        val user = newClient().also { it.signIn("friend@example.com") }
+        suspend fun send(kind: String, message: String, page: String? = null) =
+            user.post("/feedback") { contentType(ContentType.Application.Json); setBody(FeedbackRequest(kind, message, page)) }
+        assertEquals(HttpStatusCode.OK, send("problem", "The Save button did nothing on my phone", "/feed?status=new").status)
+        assertEquals(HttpStatusCode.OK, send("idea", "Show salary ranges", "https://evil.example.com/x").status)
+        assertEquals(HttpStatusCode.BadRequest, send("idea", "   ").status)
+        assertEquals(HttpStatusCode.BadRequest, send("rant", "hello").status)
+        assertEquals(HttpStatusCode.Forbidden, user.get("/admin/feedback").status)
+
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        val list = admin.get("/admin/feedback").body<FeedbackListResponse>()
+        assertEquals(2, list.newCount)
+        assertEquals(listOf("idea", "problem"), list.items.map { it.kind }, "newest first")
+        val problem = list.items.single { it.kind == "problem" }
+        assertEquals("friend@example.com", problem.email)
+        assertEquals("/feed", problem.page, "query string dropped")
+        assertNull(list.items.single { it.kind == "idea" }.page, "other sites are never stored")
+
+        assertEquals(HttpStatusCode.OK, admin.put("/admin/feedback/${problem.id}") { contentType(ContentType.Application.Json); setBody(FeedbackStatusRequest("done")) }.status)
+        assertEquals(1, admin.get("/admin/feedback").body<FeedbackListResponse>().newCount)
+        assertEquals(listOf("idea"), admin.get("/admin/feedback?status=new").body<FeedbackListResponse>().items.map { it.kind })
     }
 }

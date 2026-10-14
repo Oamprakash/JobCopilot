@@ -1,6 +1,7 @@
 package com.applycopilot
 
 import com.applycopilot.api.digestRoutes
+import com.applycopilot.api.feedbackRoutes
 import com.applycopilot.jobs.FollowUpReminders
 import com.applycopilot.api.extensionRoutes
 import com.applycopilot.api.extensionPairingRoutes
@@ -115,6 +116,7 @@ fun Application.module(deps: Deps) {
             applicationRoutes(deps)
             adminRoutes(deps)
             adminDashboardRoutes(deps)
+            feedbackRoutes(deps)
             trackerRoutes(deps)
             extensionPairingRoutes(deps)
         }
