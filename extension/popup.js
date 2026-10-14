@@ -32,12 +32,15 @@ function busy(button, label) {
   return () => { button.disabled = false; button.textContent = original; };
 }
 
+/** The app this extension belongs to. Local addresses are allowed too, for development. */
+const DEFAULT_APP = "https://trulyapply.com";
+
 function normalizeBase(raw) {
-  let url = (raw || "").trim().replace(/\/+$/, "");
+  let url = (raw || "").trim().replace(/\/+$/, "") || DEFAULT_APP;
   if (!/^https?:\/\//.test(url)) url = "https://" + url;
   const parsed = new URL(url);
   const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-  if (parsed.protocol !== "https:" && !local) throw new Error("Use the https:// address of your " + APP_NAME + " app.");
+  if (!local && parsed.origin !== DEFAULT_APP) throw new Error("This extension connects to " + DEFAULT_APP + " (or a local copy for development).");
   return parsed.origin;
 }
 
@@ -45,7 +48,7 @@ async function showConnect(status) {
   $("connect").hidden = false;
   $("main").hidden = true;
   $("who").textContent = "";
-  if (status && status.baseUrl) $("baseUrl").value = status.baseUrl;
+  $("baseUrl").value = (status && status.baseUrl) || DEFAULT_APP;
 }
 
 function describe() {
@@ -116,9 +119,11 @@ $("pair").addEventListener("click", async () => {
   say("");
   try {
     const base = normalizeBase($("baseUrl").value);
-    // Permission for just your app's address, asked for once.
-    const granted = await chrome.permissions.request({ origins: [base + "/*"] });
-    if (!granted) throw new Error("The extension needs permission to reach " + base + ".");
+    // trulyapply.com is allowed at install; a local development copy is asked for once.
+    if (base !== DEFAULT_APP) {
+      const granted = await chrome.permissions.request({ origins: [base + "/*"] });
+      if (!granted) throw new Error("The extension needs permission to reach " + base + ".");
+    }
     const r = await send("pair", { baseUrl: base, code: $("code").value });
     say("Connected as " + r.email + ".", "good");
     $("code").value = "";

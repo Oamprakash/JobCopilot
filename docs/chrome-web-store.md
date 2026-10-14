@@ -38,7 +38,7 @@ The extension only runs when you click it, on the tab you're on. It needs a free
 **Category:** Workflow & Planning (or Productivity)
 **Language:** English
 
-**Images:** a 128×128 icon (`extension/icons/128.png`), at least one 1280×800 screenshot (the popup over an application form with filled fields highlighted works well), and optionally a 440×280 small promo tile.
+**Images** (ready in `docs/store-assets/`): icon `extension/icons/128.png`; screenshots `store-1-autofill.png` and `store-2-save.png` (1280×800); small promo tile `store-tile-440x280.png`. The forms and companies in the screenshots are made up.
 
 ## 4. Privacy practices tab
 
@@ -52,8 +52,9 @@ Helps the user complete job applications they have prepared in TrulyApply: fills
 | `activeTab` | Fill the application form, or read the job posting, on the tab the user is on, only after they click the extension. |
 | `scripting` | Inject the form-filling and job-reading scripts into that tab when the user clicks a button in the popup. |
 | `storage` | Keep the app's address and the sign-in token that connects the extension to the user's own account. |
+| Host permission: `trulyapply.com` | Reach the user's own TrulyApply account: fetch their profile and approved application, and save jobs to their tracker. |
 | Host permissions: `boards.greenhouse.io`, `job-boards.greenhouse.io`, `jobs.lever.co`, `jobs.ashbyhq.com`, `*.myworkdayjobs.com` | Application forms on these hiring platforms are often embedded in an employer's careers page; the extension needs access to fill a form inside that embedded frame when the user clicks Autofill. |
-| Optional host permissions (`https://*/*`, `http://localhost/*`) | Requested once, for only the TrulyApply address the user enters when connecting, so the extension can reach the user's own account. |
+| Optional host permissions (`http://localhost/*`, `http://127.0.0.1/*`) | Only for developers running a local copy of the app; requested when they connect to it. Never used with the live service. |
 
 **Remote code:** No, I am not using remote code. (All scripts are in the package; the API returns data only.)
 
@@ -69,4 +70,4 @@ These match the [privacy policy](../web/app/privacy/page.tsx): the extension run
 
 ## 5. Review
 
-Submit for review. First reviews usually take a few days; extensions with broad host permissions take longer, which is why this one asks only for its own address at connect time. After approval, share the store link instead of "Load unpacked".
+Submit for review. First reviews usually take a few days; extensions with broad host permissions take longer, which is why this one asks only for trulyapply.com and the job platforms it fills. After approval, share the store link instead of "Load unpacked".
