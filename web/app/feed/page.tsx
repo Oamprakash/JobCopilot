@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { PartialDescriptionNote, SourceAttribution } from "@/components/SourceAttribution";
 import { Problems } from "@/components/Problems";
+import { FeedSkeleton, MatchingBanner, MatchingProgress } from "@/components/MatchingProgress";
 import {
   api,
   ApiError,
@@ -203,7 +204,7 @@ export default function FeedPage() {
             </nav>
             {status === "new" && (
               <button type="button" className="btn btn-secondary" onClick={refresh} disabled={refreshing}>
-                {refreshing ? "Finding matches…" : "Refresh"}
+                {refreshing ? "Updating…" : "Refresh"}
               </button>
             )}
           </div>
@@ -214,8 +215,12 @@ export default function FeedPage() {
 
           <Problems error={error} />
 
-          {!feed || (refreshing && feed.jobs.length === 0) ? (
-            <div className="card muted">{refreshing ? "Checking open jobs against your profile…" : "Loading…"}</div>
+          {refreshing && feed && feed.jobs.length > 0 && <MatchingBanner />}
+
+          {refreshing && status === "new" && (!feed || feed.jobs.length === 0) ? (
+            <MatchingProgress />
+          ) : !feed ? (
+            <FeedSkeleton />
           ) : feed.jobs.length === 0 ? (
             <EmptyState status={status} feed={feed} onShowWeak={() => setShowWeak(true)} />
           ) : (

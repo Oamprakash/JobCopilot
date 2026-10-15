@@ -447,3 +447,28 @@ details.notice summary::marker { color: var(--warn); }
 .chip-more { border: 1px dashed var(--border-strong); background: var(--surface); color: var(--primary); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 5px 11px; min-height: 32px; }
 .chip-more:hover { background: var(--primary-soft); }
 .entry-closed { padding-block: 12px; }
+
+/* Matching progress */
+.progress { height: 6px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.progress > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width 1s linear; }
+.matching-banner { display: flex; flex-direction: column; gap: 8px; border-color: var(--primary-soft); }
+.matching-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.matching-step { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.matching-step.done { color: var(--ink); }
+.matching-step.active { color: var(--ink); font-weight: 600; }
+.matching-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; box-sizing: border-box; }
+.matching-step.done .matching-dot { background: var(--good); border-color: var(--good); }
+.matching-step.active .matching-dot { border-color: var(--primary-soft); border-top-color: var(--primary); animation: matching-spin 0.9s linear infinite; }
+.matching-tip { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--ink); animation: matching-fade 0.4s ease; }
+.skeleton-card { pointer-events: none; }
+.skeleton { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-muted) 25%, #e7eaef 50%, var(--surface-muted) 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.skeleton-score { flex: none; width: 72px; height: 72px; border-radius: var(--radius); }
+@media (max-width:640px) { .skeleton-score { width: 64px; height: 26px; border-radius: 999px; } }
+@keyframes matching-spin { to { transform: rotate(360deg); } }
+@keyframes matching-fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@keyframes skeleton-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .progress > span, .matching-tip { transition: none; animation: none; }
+  .matching-step.active .matching-dot { animation: none; border-color: var(--primary); }
+  .skeleton { animation: none; }
+}
