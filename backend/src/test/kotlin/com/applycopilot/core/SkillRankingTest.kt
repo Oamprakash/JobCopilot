@@ -40,4 +40,41 @@ class SkillRankingTest {
         assertEquals(TailorGuard.MAX_RESUME_SKILLS, app.resume.skills.size)
         assertEquals("Kotlin", app.resume.skills.first(), "the job's skills lead")
     }
+
+    @Test
+    fun cleanupDropsLabelsFragmentsDatesAndDuplicates() {
+        val messy = profile.copy(
+            skills = listOf(
+                "Kotlin", "KOTLIN", "Languages:", "Tools", "5+ years", "2019", "and building apps with the team",
+                "worked closely with", "Jetpack Compose", "Jetpack-Compose", "C", "C++", "iOS", "Team leadership", "-",
+            ),
+        )
+        val cleaned = SkillCleanup.clean(messy).skills
+        assertEquals(setOf("Kotlin", "Jetpack Compose", "C", "C++", "iOS", "Team leadership"), cleaned.toSet())
+        assertEquals("Kotlin", cleaned.first())
+    }
+
+    @Test
+    fun parsedResumesKeepAtMostThirtySkillsTheMostUsedFirst() {
+        val listed = (1..60).joinToString(", ") { "Tool$it" }
+        val text = """
+            Priya Raman
+            Senior Android Developer
+
+            Experience
+            Senior Android Developer at Fintech Co    Jan 2020 - Present
+            • Built Jetpack Compose screens in Kotlin with Coroutines
+            • Moved the payments module to Kotlin
+
+            Skills
+            Languages: Kotlin, Java
+            Tools: $listed
+        """.trimIndent()
+        // The same steps ResumeParsingService runs after the rule-based parser.
+        val skills = SkillCleanup.clean(ProfileRules.normalize(HeuristicResumeParser().parse(text))).skills
+        assertTrue(skills.size <= SkillCleanup.MAX_PARSED_SKILLS, "${skills.size} skills")
+        assertEquals("Kotlin", skills.first())
+        assertTrue("Jetpack Compose" in skills && "Coroutines" in skills, "skills used in the experience are kept: $skills")
+        assertTrue(skills.none { it.endsWith(":") || it == "Tools" || it == "Languages" })
+    }
 }

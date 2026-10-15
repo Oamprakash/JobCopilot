@@ -84,6 +84,8 @@ class ClaudeResumeParser(
 
             Rules:
             - Copy names, titles, companies, institutions and skills exactly as written in the resume. Never add, guess or improve anything.
+            - skills: real skills only (languages, frameworks, tools, practices), each once, the ones the candidate uses most first.
+              Leave out category labels ("Tools", "Languages"), years of experience and sentence fragments. At most 30.
             - Copy each experience bullet verbatim. Do not merge, shorten or rewrite bullets.
             - Leave a field out when the resume does not state it.
             - Dates: "YYYY-MM" when the month is given, otherwise "YYYY". For a current role set current=true and leave endDate out.
