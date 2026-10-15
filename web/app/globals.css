@@ -446,3 +446,4 @@ details.notice summary::marker { color: var(--warn); }
 .landing-preview .job-body { flex-basis: 220px; }
 .chip-more { border: 1px dashed var(--border-strong); background: var(--surface); color: var(--primary); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 5px 11px; min-height: 32px; }
 .chip-more:hover { background: var(--primary-soft); }
+.entry-closed { padding-block: 12px; }

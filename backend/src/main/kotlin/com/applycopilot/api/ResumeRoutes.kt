@@ -58,17 +58,12 @@ fun Route.resumeRoutes(deps: Deps) {
             fileName = safeFileName(originalName, extracted.format),
             contentType = extracted.format.contentType,
             sizeBytes = data.size,
-        ).let { it.copy(storageKey = "resumes/$userId/${it.id}.${extracted.format.extension}") }
-
-        withContext(Dispatchers.IO) { deps.storage.put(file.storageKey, data) }
-        try {
-            deps.db.tx { c ->
-                requireUser(c, userId)
-                ResumeFiles.insert(c, file, extracted.text)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.IO) { runCatching { deps.storage.delete(file.storageKey) } }
-            throw e
+        )
+        // The file and its text are used only for reading the resume, right here. Neither is kept: the profile
+        // the user reviews is what everything else is built from, and only the file name is stored to show on it.
+        deps.db.tx { c ->
+            requireUser(c, userId)
+            ResumeFiles.insert(c, file)
         }
 
         val outcome = deps.parsing.parse(extracted.text)

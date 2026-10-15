@@ -32,9 +32,31 @@ export function ProfileEditor({ value, onChange }: Props) {
     setFocusNew(null);
   }, [focusNew]);
 
+  // Roles show as one-line summaries; Edit opens one. A role missing its title or company stays open.
+  const [openRoles, setOpenRoles] = useState<Set<number>>(new Set());
+  const isOpen = (i: number, e: Experience) => openRoles.has(i) || !e.title.trim() || !e.company.trim();
+  const toggleRole = (i: number) =>
+    setOpenRoles((s) => {
+      const next = new Set(s);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
   function addRole() {
     set("experience", [{ ...emptyExperience }, ...value.experience]);
+    setOpenRoles((s) => new Set([0, ...Array.from(s, (i) => i + 1)]));
     setFocusNew("role");
+  }
+  function moveRole(i: number, by: -1 | 1) {
+    const j = i + by;
+    if (j < 0 || j >= value.experience.length) return;
+    set("experience", move(value.experience, i, by));
+    setOpenRoles((s) => new Set(Array.from(s, (k) => (k === i ? j : k === j ? i : k))));
+  }
+  function removeRole(i: number) {
+    set("experience", value.experience.filter((_, j) => j !== i));
+    setOpenRoles((s) => new Set(Array.from(s).filter((k) => k !== i).map((k) => (k > i ? k - 1 : k))));
   }
   function addEducation() {
     set("education", [{ ...emptyEducation }, ...value.education]);
@@ -72,28 +94,38 @@ export function ProfileEditor({ value, onChange }: Props) {
             + Add role
           </button>
         </div>
-        <p className="hint" style={{ margin: "-8px 0 0" }}>Latest role first. New roles are added at the top; use ↑ ↓ to reorder.</p>
+        <p className="hint" style={{ margin: "-8px 0 0" }}>
+          Read from your resume. Tailored resumes are built from these, so open a role with Edit if a date or bullet came out wrong. Latest
+          role first; ↑ ↓ reorder.
+        </p>
         {value.experience.length === 0 && <p className="muted small">No roles yet. Add your current and past roles.</p>}
         <div className="stack" ref={rolesRef}>
-        {value.experience.map((e, i) => (
-          <div className="entry" key={i}>
+        {value.experience.map((e, i) => {
+          const open = isOpen(i, e);
+          const bullets = e.bullets.filter((b) => b.trim()).length;
+          return (
+          <div className={`entry${open ? "" : " entry-closed"}`} key={i}>
             <div className="entry-head">
-              <strong>{e.title || e.company ? `${e.title || "Role"} · ${e.company || "Company"}` : "New role"}</strong>
+              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                <strong>{e.title || e.company ? `${e.title || "Role"} · ${e.company || "Company"}` : "New role"}</strong>
+                {!open && (
+                  <span className="muted small">
+                    {[dates(e), bullets ? `${bullets} bullet${bullets === 1 ? "" : "s"}` : "no bullets"].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </div>
               <div className="entry-tools">
                 <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move role ${i + 1} up`} disabled={i === 0}
-                  onClick={() => set("experience", move(value.experience, i, -1))}>↑</button>
+                  onClick={() => moveRole(i, -1)}>↑</button>
                 <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move role ${i + 1} down`} disabled={i === value.experience.length - 1}
-                  onClick={() => set("experience", move(value.experience, i, 1))}>↓</button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  aria-label={`Remove role ${i + 1}`}
-                  onClick={() => set("experience", value.experience.filter((_, j) => j !== i))}
-                >
-                  Remove
+                  onClick={() => moveRole(i, 1)}>↓</button>
+                <button type="button" className="btn btn-ghost" aria-expanded={open} onClick={() => toggleRole(i)}>
+                  {open ? "Done" : "Edit"}
                 </button>
               </div>
             </div>
+            {open && (
+            <>
             <div className="grid-2">
               <TextField label="Title" value={e.title} onChange={(v) => setExperience(i, { title: v })} required />
               <TextField label="Company" value={e.company} onChange={(v) => setExperience(i, { company: v })} required />
@@ -120,8 +152,16 @@ export function ProfileEditor({ value, onChange }: Props) {
                 onChange={(ev) => setExperience(i, { bullets: ev.target.value.split("\n") })}
               />
             </label>
+            <div>
+              <button type="button" className="btn btn-ghost" style={{ paddingInline: 0, color: "var(--bad)" }} aria-label={`Remove role ${i + 1}`} onClick={() => removeRole(i)}>
+                Remove this role
+              </button>
+            </div>
+            </>
+            )}
           </div>
-        ))}
+          );
+        })}
         </div>
       </section>
 
@@ -169,6 +209,14 @@ export function ProfileEditor({ value, onChange }: Props) {
       </section>
     </div>
   );
+}
+
+/** "2020-07 – Present" from a role's dates, or "" when it has none. */
+function dates(e: Experience): string {
+  const start = e.startDate?.trim();
+  const end = e.current ? "Present" : e.endDate?.trim();
+  if (!start && !end) return "";
+  return `${start || "?"} – ${end || "?"}`;
 }
 
 function TextField(props: {

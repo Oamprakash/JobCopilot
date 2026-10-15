@@ -103,7 +103,7 @@ All settings are in [`backend/.env.example`](backend/.env.example). The API read
 
 ## Launch
 
-- [docs/launch.md](docs/launch.md): your own domain, email sign-in (Resend), production mode, moving the database before the free one expires, R2 file storage, and a pre-launch checklist.
+- [docs/launch.md](docs/launch.md): your own domain, email sign-in (Resend), production mode, moving the database before the free one expires and a pre-launch checklist.
 - [docs/chrome-web-store.md](docs/chrome-web-store.md): publishing the extension (listing text, permission justifications, data disclosures).
 - The app's name lives in `web/lib/brand.ts`, `APP_NAME` and `extension/manifest.json`. `/privacy` and `/terms` read it from there.
 
@@ -116,7 +116,7 @@ All settings are in [`backend/.env.example`](backend/.env.example). The API read
 3. Fill in the prompted values: `ADMIN_EMAILS` (you), `INVITE_EMAILS` (who may sign in; empty lets anyone in), and optionally `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` / `ANTHROPIC_API_KEY`. Click **Apply**. The first build takes about 10 minutes.
 4. Open the service URL (`https://jobcopilot….onrender.com`). Invited users see their sign-in link on screen. Admin links are never shown on screen: find yours under the service's **Logs** ("Magic link for …").
 
-Free-tier limits: the service sleeps after 15 idle minutes (the next visit takes about a minute), the free database expires 30 days after creation, and uploaded resume files don't survive a restart (parsed profiles do, they're in the database). Every push to `main` redeploys. For real users: a paid instance and database, an email service (`RESEND_API_KEY`, then `APP_ENV=prod`), and file storage.
+Free-tier limits: the service sleeps after 15 idle minutes (the next visit takes about a minute), the free database expires 30 days after creation. Every push to `main` redeploys. For real users: a paid instance and database, and an email service (`RESEND_API_KEY`, then `APP_ENV=prod`).
 
 ## Share a preview (Cloudflare Tunnel)
 
@@ -189,6 +189,6 @@ Validation errors return `400 {error, problems: [...]}`.
 
 - Set `APP_ENV=prod`, a 32+ character `JWT_SECRET`, and `RESEND_API_KEY` + `MAIL_FROM`. The API refuses to start in prod without them.
 - Serve the web app and API under one site (the Next.js rewrite does this), with `WEB_BASE_URL` set to the public web origin; cross-origin state-changing requests are rejected.
-- Uploads go to `STORAGE_DIR` on local disk. `FileStorage` is the seam for moving to Cloudflare R2.
+- Uploaded resumes are read and discarded: only the file name is kept. `FileStorage` (local disk or R2) is still there for features that need files.
 - `backend/Dockerfile` builds a fat jar image.
 

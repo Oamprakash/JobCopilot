@@ -103,11 +103,12 @@ data class ResumeFile(
 )
 
 object ResumeFiles {
-    fun insert(c: Connection, file: ResumeFile, textContent: String) {
+    /** Records an upload's name and size. The file itself and its text aren't kept (storage_key is empty). */
+    fun insert(c: Connection, file: ResumeFile) {
         c.prepareStatement(
             """
             INSERT INTO resume_files (id, user_id, storage_key, file_name, content_type, size_bytes, text_content)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, NULL)
             """.trimIndent(),
         ).use { st ->
             st.setObject(1, file.id)
@@ -116,7 +117,6 @@ object ResumeFiles {
             st.setString(4, file.fileName)
             st.setString(5, file.contentType)
             st.setInt(6, file.sizeBytes)
-            st.setString(7, textContent)
             st.executeUpdate()
         }
     }

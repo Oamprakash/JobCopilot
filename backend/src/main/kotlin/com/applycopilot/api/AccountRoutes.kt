@@ -54,7 +54,8 @@ fun Route.accountRoutes(deps: Deps) {
             keys
         }
         withContext(Dispatchers.IO) {
-            keys.forEach { key -> runCatching { deps.storage.delete(key) }.onFailure { log.warn("Could not delete {}", key, it) } }
+            // Files from before uploads stopped being kept; newer rows have no file (blank key).
+            keys.filter { it.isNotBlank() }.forEach { key -> runCatching { deps.storage.delete(key) }.onFailure { log.warn("Could not delete {}", key, it) } }
         }
         call.clearSessionCookie(deps.config)
         call.respond(OkResponse())

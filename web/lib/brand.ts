@@ -12,5 +12,5 @@ export const brand = {
   /** Courts that handle disputes under the terms. */
   jurisdiction: "Chennai, Tamil Nadu, India",
   /** Terms and privacy policy "last updated" date. */
-  policyDate: "14 October 2026",
+  policyDate: "15 October 2026",
 };

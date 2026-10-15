@@ -24,8 +24,8 @@ export default function PrivacyPage() {
         <tbody>
           <tr><td>Your email address</td><td>To sign you in with one-time links and send emails about your account: follow-up reminders and, unless you turn it off, a morning email with your best new matches. Every match email has a one-click unsubscribe link, and you can turn it off under Preferences.</td></tr>
           <tr>
-            <td>Your resume file and its text</td>
-            <td>To build your profile. We read the text only to fill in the profile you then review and save.</td>
+            <td>Your resume file</td>
+            <td>Read once to fill in the profile you then review and save. We don&apos;t keep the file or its text, only its name.</td>
           </tr>
           <tr>
             <td>Your profile: name, contact details, location, links, work history, education, skills</td>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
       <h2>Who processes data for us</h2>
       <p>We share data only with these service providers, only to run {brand.name}, and under their own security and privacy commitments:</p>
       <ul>
-        <li><strong>Render</strong> (hosting and database) and <strong>Cloudflare</strong> (file storage and network): store and serve everything above.</li>
+        <li><strong>Render</strong> (hosting and database) and <strong>Cloudflare</strong> (domain and network): store and serve everything above.</li>
         <li><strong>Resend</strong>: sends sign-in, reminder and daily match emails to your address.</li>
         <li>
           <strong>Anthropic</strong> (the Claude AI model), when enabled: reads your resume text and profile to fill in your profile,

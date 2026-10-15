@@ -382,7 +382,14 @@ class ApiTest {
         client.signIn("oam@example.com")
         val upload = client.upload(docx(RESUME)).body<ResumeUploadResponse>()
         client.put("/profile") { contentType(ContentType.Application.Json); setBody(SaveProfileRequest(upload.profile, upload.resumeFile.id)) }
-        assertTrue(Files.walk(storageDir).anyMatch { Files.isRegularFile(it) })
+        // The uploaded file and its text are only read, never kept.
+        assertFalse(Files.walk(storageDir).anyMatch { Files.isRegularFile(it) }, "resume files are not stored")
+        deps.db.tx { c ->
+            c.createStatement().use { st ->
+                st.executeQuery("SELECT count(*) FROM resume_files WHERE text_content IS NOT NULL OR storage_key <> ''").use { rs -> rs.next(); assertEquals(0, rs.getInt(1)) }
+            }
+        }
+        assertEquals("resume.docx", client.get("/profile").body<ProfileResponse>().resumeFile?.fileName, "the file name is kept for the profile")
 
         assertEquals(HttpStatusCode.OK, client.delete("/me").status)
         assertFalse(Files.walk(storageDir).anyMatch { Files.isRegularFile(it) }, "resume files must be deleted")

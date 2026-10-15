@@ -54,15 +54,9 @@ Render's free Postgres expires 30 days after creation. Choose one:
 
 **Check:** sign in on the live site; your profile, tracker and admin dashboard data are all there.
 
-## 5. Keep uploaded resumes (Cloudflare R2)
+## 5. Resume files (nothing to set up)
 
-Optional but recommended: the original resume files otherwise disappear when the service restarts (profiles themselves are in the database).
-
-1. Cloudflare → **R2** → create a bucket (e.g. `jobcopilot-uploads`). Leave public access **off**.
-2. R2 → **Manage API tokens** → create a token with **Object Read & Write** on that bucket only.
-3. Render → Environment: `R2_ACCOUNT_ID` (your Cloudflare account ID), `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. Set all four or none: the API refuses to start with only some.
-
-**Check:** upload a resume in the app; the file appears in the bucket.
+Uploaded resumes are read into the profile and not kept, so no file storage is needed. If you set up R2 earlier, you can remove `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from Render, empty and delete the bucket, and delete its API token. (The app still supports R2 should a feature ever need file storage.)
 
 ## 6. Always-on (optional)
 
