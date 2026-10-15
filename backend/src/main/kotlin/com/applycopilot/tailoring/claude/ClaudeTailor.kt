@@ -148,7 +148,7 @@ class ClaudeTailor(
 
             Resume:
             - headline: the candidate's current headline or one of their real job titles.
-            - skills: only skills from the profile, most relevant to the job first.
+            - skills: at most 12, only skills from the profile, the ones this job asks for first.
             - experience: every role, by its index. For each, list the most relevant bullets first, each with the
               index of the profile bullet it rewrites. Light rewording toward the job's language is fine; keep every
               fact and number exactly as given. You may leave out bullets that don't help.

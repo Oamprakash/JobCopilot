@@ -4,6 +4,7 @@ import com.applycopilot.core.Grounding
 import com.applycopilot.core.HeuristicResumeParser
 import com.applycopilot.core.Profile
 import com.applycopilot.core.ProfileRules
+import com.applycopilot.core.SkillRanking
 import org.slf4j.LoggerFactory
 
 data class ParseOutcome(
@@ -32,6 +33,8 @@ class ResumeParsingService(
         } ?: (heuristic.parse(text) to "heuristic")
 
         val grounded = Grounding.ground(ProfileRules.normalize(raw), text)
-        return ParseOutcome(ProfileRules.normalize(grounded.profile), grounded.removed, parser)
+        val profile = ProfileRules.normalize(grounded.profile)
+        // Most-used skills first: the profile shows the top ones and tailored resumes lead with them.
+        return ParseOutcome(profile.copy(skills = SkillRanking.rank(profile)), grounded.removed, parser)
     }
 }

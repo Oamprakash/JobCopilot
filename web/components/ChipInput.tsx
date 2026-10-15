@@ -12,6 +12,8 @@ type Props = {
   hint?: string;
   /** Values to offer while typing. Without them the input is a plain chip input. */
   suggestions?: AutocompleteOption[];
+  /** Show only the first N chips until "+M more" is clicked (long lists like skills). */
+  collapseAfter?: number;
 };
 
 /**
@@ -19,12 +21,15 @@ type Props = {
  * chips are removed with their × button, so holding Backspace can't wipe saved values.
  * With [suggestions], a list of matches opens while typing: ↑/↓ move, Enter or a click adds one, Escape closes it.
  */
-export function ChipInput({ label, values, onChange, placeholder, hint, suggestions }: Props) {
+export function ChipInput({ label, values, onChange, placeholder, hint, suggestions, collapseAfter }: Props) {
   const id = useId();
   const listId = `${id}-list`;
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [expanded, setExpanded] = useState(false);
+  const collapsed = collapseAfter != null && !expanded && values.length > collapseAfter;
+  const shown = collapsed ? values.slice(0, collapseAfter) : values;
 
   const matches = useMemo(
     () => (suggestions ? matchOptions(suggestions, draft, values) : []),
@@ -67,7 +72,7 @@ export function ChipInput({ label, values, onChange, placeholder, hint, suggesti
       {hint && <span className="hint">{hint}</span>}
       <div className="combo">
         <div className="chips">
-          {values.map((value) => (
+          {shown.map((value) => (
             <span className="chip" key={value}>
               {value}
               <button type="button" aria-label={`Remove ${value}`} onClick={() => onChange(values.filter((v) => v !== value))}>
@@ -75,6 +80,16 @@ export function ChipInput({ label, values, onChange, placeholder, hint, suggesti
               </button>
             </span>
           ))}
+          {collapsed && (
+            <button type="button" className="chip chip-more" onClick={() => setExpanded(true)}>
+              +{values.length - (collapseAfter ?? 0)} more
+            </button>
+          )}
+          {collapseAfter != null && expanded && values.length > collapseAfter && (
+            <button type="button" className="chip chip-more" onClick={() => setExpanded(false)}>
+              Show top {collapseAfter}
+            </button>
+          )}
           <input
             id={id}
             className="input chip-input"

@@ -113,6 +113,7 @@ object HeuristicTailor {
         val skills = profile.skills.withIndex()
             .sortedWith(compareByDescending<IndexedValue<String>> { if (jdText.contains(" ${HeuristicScorer.normalizedPhrase(it.value)} ")) 1 else 0 }.thenBy { it.index })
             .map { it.value }
+            .take(TailorGuard.MAX_RESUME_SKILLS)
 
         val experience = profile.experience.mapIndexed { i, e ->
             TailoredExperience(
@@ -223,6 +224,9 @@ object HeuristicTailor {
  * are dropped. Pay and personal questions are always left to the user.
  */
 object TailorGuard {
+    /** A resume's skills line stays readable: the job's skills first, then the profile's top ones. */
+    const val MAX_RESUME_SKILLS = 12
+
     /** A reworded bullet must keep this share of its content words from the original bullet... */
     private const val MIN_SOURCE_OVERLAP = 0.3
     /** ...and draw this share from anywhere in the profile, so rewording can't introduce new facts. */
@@ -291,7 +295,7 @@ object TailorGuard {
             val own = profile.skills.firstOrNull { it.equals(s.trim(), ignoreCase = true) }
             if (own == null) removed += "Skill \"$s\" is not in your profile"
             own
-        }.distinct().let { it + profile.skills.filter { s -> s !in it } }
+        }.distinct().let { it + profile.skills.filter { s -> s !in it } }.take(MAX_RESUME_SKILLS)
 
         val headline = draft.resume.headline.takeIf { h ->
             h.isNotBlank() && (same(h, profile.headline) || profile.experience.any { same(h, it.title) })

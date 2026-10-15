@@ -157,7 +157,14 @@ export function ProfileEditor({ value, onChange }: Props) {
 
       <section className="stack">
         <h2>Skills and links</h2>
-        <ChipInput label="Skills" values={value.skills} onChange={(v) => set("skills", v)} placeholder="Add a skill" />
+        <ChipInput
+          label="Skills"
+          hint="Your most-used skills first. Tailored resumes lead with the ones each job asks for (12 at most); every skill here counts for matching."
+          values={value.skills}
+          onChange={(v) => set("skills", v)}
+          placeholder="Add a skill"
+          collapseAfter={10}
+        />
         <ChipInput label="Links" values={value.links} onChange={(v) => set("links", v)} placeholder="linkedin.com/in/…" />
       </section>
     </div>
