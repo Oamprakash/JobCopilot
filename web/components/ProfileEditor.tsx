@@ -58,9 +58,30 @@ export function ProfileEditor({ value, onChange }: Props) {
     set("experience", value.experience.filter((_, j) => j !== i));
     setOpenRoles((s) => new Set(Array.from(s).filter((k) => k !== i).map((k) => (k > i ? k - 1 : k))));
   }
+  // Education works the same way: one line per entry, Edit to open; a new or nameless one stays open.
+  const [openEdu, setOpenEdu] = useState<Set<number>>(new Set());
+  const eduOpen = (i: number, ed: Education) => openEdu.has(i) || !ed.institution.trim();
+  const toggleEdu = (i: number) =>
+    setOpenEdu((s) => {
+      const next = new Set(s);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   function addEducation() {
     set("education", [{ ...emptyEducation }, ...value.education]);
+    setOpenEdu((s) => new Set([0, ...Array.from(s, (i) => i + 1)]));
     setFocusNew("education");
+  }
+  function moveEdu(i: number, by: -1 | 1) {
+    const j = i + by;
+    if (j < 0 || j >= value.education.length) return;
+    set("education", move(value.education, i, by));
+    setOpenEdu((s) => new Set(Array.from(s, (k) => (k === i ? j : k === j ? i : k))));
+  }
+  function removeEdu(i: number) {
+    set("education", value.education.filter((_, j) => j !== i));
+    setOpenEdu((s) => new Set(Array.from(s).filter((k) => k !== i).map((k) => (k > i ? k - 1 : k))));
   }
   function move<T>(list: T[], i: number, by: -1 | 1): T[] {
     const j = i + by;
@@ -173,25 +194,47 @@ export function ProfileEditor({ value, onChange }: Props) {
           </button>
         </div>
         <div className="stack" ref={educationRef}>
-        {value.education.map((ed, i) => (
-          <div className="entry" key={i}>
+        {value.education.length === 0 && <p className="muted small">No education yet. It appears on your tailored resumes.</p>}
+        {value.education.map((ed, i) => {
+          const open = eduOpen(i, ed);
+          const degree = [ed.degree, ed.field].filter((x) => x && x.trim()).join(", ");
+          return (
+          <div className={`entry${open ? "" : " entry-closed"}`} key={i}>
+            <div className="entry-head">
+              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                <strong>{degree || ed.institution || "New education"}</strong>
+                {!open && (
+                  <span className="muted small">{[degree ? ed.institution : null, ed.endYear].filter(Boolean).join(" · ")}</span>
+                )}
+              </div>
+              <div className="entry-tools">
+                <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} up`} disabled={i === 0}
+                  onClick={() => moveEdu(i, -1)}>↑</button>
+                <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} down`} disabled={i === value.education.length - 1}
+                  onClick={() => moveEdu(i, 1)}>↓</button>
+                <button type="button" className="btn btn-ghost" aria-expanded={open} onClick={() => toggleEdu(i)}>
+                  {open ? "Done" : "Edit"}
+                </button>
+              </div>
+            </div>
+            {open && (
+            <>
             <div className="grid-2">
               <TextField label="Institution" value={ed.institution} onChange={(v) => setEducation(i, { institution: v })} />
               <TextField label="Degree" value={ed.degree ?? ""} onChange={(v) => setEducation(i, { degree: v || null })} />
               <TextField label="Field" value={ed.field ?? ""} onChange={(v) => setEducation(i, { field: v || null })} />
               <NumberField label="Year completed" integer value={ed.endYear} onChange={(v) => setEducation(i, { endYear: v })} />
             </div>
-            <div className="entry-tools">
-              <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} up`} disabled={i === 0}
-                onClick={() => set("education", move(value.education, i, -1))}>↑</button>
-              <button type="button" className="btn btn-ghost icon-btn" aria-label={`Move education ${i + 1} down`} disabled={i === value.education.length - 1}
-                onClick={() => set("education", move(value.education, i, 1))}>↓</button>
-              <button type="button" className="btn btn-ghost" onClick={() => set("education", value.education.filter((_, j) => j !== i))}>
-                Remove
+            <div>
+              <button type="button" className="btn btn-ghost" style={{ paddingInline: 0, color: "var(--bad)" }} aria-label={`Remove education ${i + 1}`} onClick={() => removeEdu(i)}>
+                Remove this entry
               </button>
             </div>
+            </>
+            )}
           </div>
-        ))}
+          );
+        })}
         </div>
       </section>
 
