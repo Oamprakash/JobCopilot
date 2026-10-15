@@ -17,6 +17,7 @@ import {
   type Preferences,
   type Suggestion,
 } from "@/lib/api";
+import { remoteCountryName, remoteFrom } from "@/lib/remoteCountries";
 import { useMe } from "@/lib/useMe";
 
 const SHOW_WEAK_KEY = "feed.showWeak";
@@ -154,7 +155,15 @@ export default function FeedPage() {
             <h2>Matching on</h2>
             {prefs ? (
               <div className="chips">
-                {[...prefs.roles, ...prefs.locations, prefs.remoteMode !== "any" ? prefs.remoteMode : null, prefs.minCtcLpa ? `${prefs.minCtcLpa} LPA+` : null]
+                {[
+                  ...prefs.roles,
+                  ...prefs.locations,
+                  prefs.remoteMode !== "any" ? prefs.remoteMode : null,
+                  prefs.remoteMode !== "onsite" && prefs.remoteMode !== "hybrid" && (prefs.remoteCountries?.length ?? 0) > 0
+                    ? `Remote from ${remoteFrom(prefs.remoteCountries).map(remoteCountryName).join(", ")}`
+                    : null,
+                  prefs.minCtcLpa ? `${prefs.minCtcLpa} LPA+` : null,
+                ]
                   .filter((x): x is string => Boolean(x))
                   .map((label) => (
                     <span key={label} className="chip chip-plain">

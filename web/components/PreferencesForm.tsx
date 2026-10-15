@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, type AutocompleteOptions, type Preferences, type RemoteMode } from "@/lib/api";
 import { fallbackOptions } from "@/lib/autocomplete";
+import { remoteCountries, remoteFrom } from "@/lib/remoteCountries";
 import { visaCountries } from "@/lib/visaCountries";
 import { ChipInput } from "./ChipInput";
 import { NumberField } from "./NumberField";
@@ -49,6 +50,9 @@ export function PreferencesForm({ value, onChange }: { value: Preferences; onCha
           ))}
         </select>
       </label>
+      {(value.remoteMode === "any" || value.remoteMode === "remote" || value.locations.some((l) => l.toLowerCase() === "remote")) && (
+        <RemoteCountries value={value.remoteCountries ?? []} onChange={(v) => set("remoteCountries", v)} />
+      )}
       <div className="grid-2">
         <NumberField label="Min CTC (LPA)" value={value.minCtcLpa} onChange={(v) => set("minCtcLpa", v)} />
         <NumberField label="Notice period (days)" integer value={value.noticePeriodDays} onChange={(v) => set("noticePeriodDays", v)} />
@@ -68,6 +72,46 @@ export function PreferencesForm({ value, onChange }: { value: Preferences; onCha
         </span>
       </label>
     </div>
+  );
+}
+
+/**
+ * Where the user can work remotely from. Most remote jobs are open only to people living (or allowed to work) in
+ * certain countries, so this decides which remote jobs show up. Nothing chosen means India.
+ */
+function RemoteCountries({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [showAll, setShowAll] = useState(false);
+  const chosen = new Set(remoteFrom(value));
+  const toggle = (code: string) => {
+    const next = chosen.has(code) ? [...chosen].filter((c) => c !== code) : [...chosen, code];
+    // Keep at least one: clearing everything would quietly fall back to India.
+    if (next.length > 0) onChange(next);
+  };
+  const visible = showAll ? remoteCountries : remoteCountries.filter((c, i) => i < 8 || chosen.has(c.code));
+  return (
+    <fieldset className="field remote-countries">
+      <legend>Remote jobs: countries you can work from</legend>
+      <span className="hint">Most remote jobs only hire people who live, or may legally work, in certain countries. Pick yours.</span>
+      <div className="chips" role="group" aria-label="Countries you can work remotely from">
+        {visible.map((c) => (
+          <button
+            key={c.code}
+            type="button"
+            className="chip chip-toggle"
+            aria-pressed={chosen.has(c.code)}
+            onClick={() => toggle(c.code)}
+          >
+            {chosen.has(c.code) ? "✓ " : ""}
+            {c.name}
+          </button>
+        ))}
+        {!showAll && visible.length < remoteCountries.length && (
+          <button type="button" className="chip chip-more" onClick={() => setShowAll(true)}>
+            More countries
+          </button>
+        )}
+      </div>
+    </fieldset>
   );
 }
 

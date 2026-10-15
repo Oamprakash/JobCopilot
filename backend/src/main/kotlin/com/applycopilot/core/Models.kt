@@ -68,4 +68,13 @@ data class Preferences(
     val needsVisaSponsorship: Boolean = false,
     /** A morning email with the day's new matches. */
     val dailyDigest: Boolean = true,
-)
+    /**
+     * Countries the user can work remotely from (ISO codes, lowercase): where they live or may legally work. Remote
+     * jobs open only to other countries are hidden. Empty means India, the default for everyone so far.
+     */
+    val remoteCountries: List<String> = emptyList(),
+) {
+    /** [remoteCountries], cleaned, or India when none are set. The first is treated as home. */
+    fun remoteFrom(): List<String> =
+        remoteCountries.map { it.trim().lowercase() }.filter { it.length == 2 && it.all(Char::isLetter) }.distinct().ifEmpty { listOf("in") }
+}

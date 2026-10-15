@@ -39,15 +39,19 @@ object SearchQueries {
         return keywords.flatMap { what -> wheres.map { (where, country) -> SearchQuery(what.lowercase(), where.lowercase(), country) } }
     }
 
+    const val MAX_REMOTE_COUNTRIES = 3
+
     /**
-     * Remote-job searches (Himalayas) for users who'd take a remote job: one per role, open to candidates in
-     * [country]. Users who want only on-site or hybrid work get none, since every Himalayas job is remote.
+     * Remote-job searches (Himalayas) for users who'd take a remote job: one per role and per country they can work
+     * from (India unless they chose others). Users who want only on-site or hybrid work get none, since every
+     * Himalayas job is remote.
      */
-    fun remoteFor(profile: Profile, prefs: Preferences, country: String = "in"): List<SearchQuery> {
+    fun remoteFor(profile: Profile, prefs: Preferences): List<SearchQuery> {
         val acceptsRemote = prefs.remoteMode == RemoteMode.REMOTE || prefs.remoteMode == RemoteMode.ANY ||
             prefs.locations.any { it.equals("remote", ignoreCase = true) }
         if (!acceptsRemote) return emptyList()
-        return roleKeywords(profile, prefs).map { SearchQuery(it.lowercase(), "", country) }
+        val countries = prefs.remoteFrom().take(MAX_REMOTE_COUNTRIES)
+        return roleKeywords(profile, prefs).flatMap { what -> countries.map { SearchQuery(what.lowercase(), "", it) } }
     }
 
     /** Each target role as its distinctive words, the ones the role filter keys on. */

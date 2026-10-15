@@ -109,6 +109,7 @@ object PreferenceRules {
         roles = p.roles.cleanList(),
         locations = p.locations.cleanList(),
         skipCompanies = p.skipCompanies.cleanList(),
+        remoteCountries = p.remoteCountries.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct(),
     )
 
     fun validate(p: Preferences): List<String> {
@@ -119,6 +120,8 @@ object PreferenceRules {
         if (p.locations.any { it.length > 80 }) problems += "Each location must be at most 80 characters"
         if (p.skipCompanies.size > 50) problems += "At most 50 companies to skip"
         if (p.skipCompanies.any { it.length > 120 }) problems += "Each company name must be at most 120 characters"
+        if (p.remoteCountries.size > 8) problems += "At most 8 countries for remote work"
+        if (p.remoteCountries.any { !Regex("^[a-z]{2}$").matches(it) }) problems += "Remote-work countries must be two-letter country codes"
         p.minCtcLpa?.let { if (it < 0 || it > 1000) problems += "Minimum CTC must be between 0 and 1000 LPA" }
         p.experienceYears?.let { if (it < 0 || it > 60) problems += "Experience must be between 0 and 60 years" }
         p.noticePeriodDays?.let { if (it < 0 || it > 365) problems += "Notice period must be between 0 and 365 days" }

@@ -396,11 +396,20 @@ class FeedApiTest {
         client.post("/feed/refresh")
         assertEquals(1, himalayasCalls.size)
 
+        // Someone who can work from the US searches there, and sees US-only remote jobs but not India-only ones.
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(remoteMode = RemoteMode.REMOTE, remoteCountries = listOf("us"))) }
+        val us = client.post("/feed/refresh?weak=true").body<FeedResponse>()
+        assertEquals("US", himalayasCalls.last().parameters["country"])
+        assertEquals(2, himalayasCalls.size)
+        assertTrue(us.jobs.any { it.company == "Stateside" })
+        assertFalse(us.jobs.any { it.company == "Nimbus" }, "open to India and the Philippines only")
+        assertTrue(us.jobs.any { it.company == "Orbit" }, "worldwide")
+
         // Admins can switch it off: no calls, and its jobs leave New.
         val admin = newClient().also { it.signIn("admin@example.com") }
         val on = admin.get("/admin/sources/himalayas").body<SourceStatusDto>()
         assertTrue(on.configured && on.enabled)
-        assertEquals(1, on.callsToday)
+        assertEquals(2, on.callsToday)
         admin.put("/admin/sources/himalayas") { contentType(ContentType.Application.Json); setBody(EnabledRequest(false)) }
         client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs) }
         assertFalse(client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.any { it.source == "himalayas" })

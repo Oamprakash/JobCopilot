@@ -45,6 +45,8 @@ export type Preferences = {
   needsVisaSponsorship?: boolean;
   /** A morning email with the day's best new matches. On unless turned off. */
   dailyDigest?: boolean;
+  /** Countries the user can work remotely from (ISO codes, lowercase). Empty means India. */
+  remoteCountries?: string[];
 };
 
 export type InterviewQuestionKind = "role" | "skill" | "gap" | "behavioural" | "company";

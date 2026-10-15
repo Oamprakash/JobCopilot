@@ -76,7 +76,12 @@ class SearchQueriesTest {
             listOf(SearchQuery("android", "", "in")),
             SearchQueries.remoteFor(profile, Preferences(roles = roles, locations = listOf("Chennai"))),
         )
-        assertEquals(emptyList(), SearchQueries.remoteFor(profile, Preferences(roles = roles, remoteMode = RemoteMode.ONSITE)))
+        assertEquals(emptyList<SearchQuery>(), SearchQueries.remoteFor(profile, Preferences(roles = roles, remoteMode = RemoteMode.ONSITE)))
+        // Someone who can work from the US and Canada searches both, never India.
+        assertEquals(
+            listOf(SearchQuery("android", "", "us"), SearchQuery("android", "", "ca")),
+            SearchQueries.remoteFor(profile, Preferences(roles = roles, remoteMode = RemoteMode.REMOTE, remoteCountries = listOf("US", "ca"))),
+        )
         // On-site, but "Remote" listed as a place: remote jobs are welcome.
         assertEquals(
             listOf(SearchQuery("android", "", "in")),

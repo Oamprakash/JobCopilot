@@ -75,7 +75,7 @@ export default function PrivacyPage() {
           score job fit and draft tailored applications. Under its commercial terms, Anthropic doesn&apos;t train its models on this data.
         </li>
         <li><strong>Adzuna</strong> (job search): we send search keywords and cities, never your name, email or resume.</li>
-        <li><strong>Himalayas</strong> (remote job search): we send search keywords and the country, never your name, email or resume.</li>
+        <li><strong>Himalayas</strong> (remote job search): we send search keywords and the countries you can work from, never your name, email or resume.</li>
       </ul>
       <p>Some of these providers process data outside India. We don&apos;t sell your data or share it with employers or recruiters.</p>
 

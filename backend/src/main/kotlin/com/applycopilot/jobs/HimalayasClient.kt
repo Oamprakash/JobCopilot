@@ -18,18 +18,19 @@ import java.time.Instant
 /**
  * Himalayas' free public remote-jobs API (himalayas.app/docs/remote-jobs-api): no key, data refreshed once a day.
  * Its terms ask for a visible link back to himalayas.app wherever the jobs are shown, which the feed's
- * attribution and each job's link (the listing on Himalayas) provide. Every job is remote; we search only
- * jobs open to candidates in [country] (worldwide ones included), so a US-only remote job never shows up for
- * someone in India.
+ * attribution and each job's link (the listing on Himalayas) provide. Every job is remote; each search asks only
+ * for jobs open to candidates in the query's country (worldwide ones included), so a US-only remote job never
+ * shows up for someone who can only work from India.
  */
 class HimalayasClient(
     private val http: HttpClient,
     private val base: String = "https://himalayas.app",
-    val country: String = "IN",
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     suspend fun search(query: SearchQuery, page: Int = 1): SearchPage {
+        val country = query.country.uppercase()
+        require(Regex("^[A-Z]{2}$").matches(country)) { "Country must be a two-letter code" }
         val response = http.get("$base/jobs/api/search") {
             parameter("q", query.what)
             parameter("country", country)
@@ -72,7 +73,8 @@ class HimalayasClient(
                 val codes = places.mapNotNull { it.str("alpha2")?.uppercase() }
                 // Defensive: the search already filters by country, but never show a job the candidate can't take.
                 if (codes.isNotEmpty() && country.uppercase() !in codes) return@mapNotNull null
-                val names = places.mapNotNull { it.str("name") }
+                // The searched country first, so it survives the cap and the feed's location filter finds it.
+                val names = places.sortedByDescending { it.str("alpha2")?.uppercase() == country.uppercase() }.mapNotNull { it.str("name") }
                 val location = if (names.isEmpty()) "Remote (worldwide)" else "Remote (${names.take(4).joinToString(", ")}${if (names.size > 4) " +${names.size - 4} more" else ""})"
 
                 val description = Html.toText(r.str("description") ?: r.str("excerpt").orEmpty()).trim()

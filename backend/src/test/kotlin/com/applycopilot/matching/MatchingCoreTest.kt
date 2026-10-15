@@ -86,6 +86,31 @@ class MatchingCoreTest {
         assertFalse(Locations.remoteForIndia(job("x", "Bengaluru, India")))
     }
 
+    @Test
+    fun remoteJobsFollowTheCountriesYouCanWorkFrom() {
+        val usCanada = listOf("us", "ca")
+        assertEquals("us", Locations.remoteOpenTo(job("x", "Remote from the US"), usCanada))
+        assertEquals("us", Locations.remoteOpenTo(job("x", "Remote (United States)", remote = true), usCanada))
+        assertEquals("ca", Locations.remoteOpenTo(job("x", "Remote - Toronto"), usCanada))
+        assertEquals("us", Locations.remoteOpenTo(job("x", "Remote, North America"), usCanada))
+        assertEquals("worldwide", Locations.remoteOpenTo(job("x", "Remote (worldwide)", remote = true), usCanada))
+        assertNull(Locations.remoteOpenTo(job("x", "Remote - India"), usCanada))
+        assertNull(Locations.remoteOpenTo(job("x", "Remote, EMEA"), usCanada))
+        assertEquals("de", Locations.remoteOpenTo(job("x", "Remote, EMEA"), listOf("de")))
+        assertNull(Locations.remoteOpenTo(job("x", "New York, United States"), usCanada), "on-site is not remote")
+
+        // The hard filter uses them: a US-based remote seeker sees US remote jobs, not India-only ones.
+        val us = prefs.copy(locations = emptyList(), remoteMode = RemoteMode.REMOTE, remoteCountries = listOf("us"))
+        assertTrue(HardFilter.evaluate(job("Senior Android Engineer", "Remote (United States)", remote = true), profile, us).pass)
+        assertFalse(HardFilter.evaluate(job("Senior Android Engineer", "Remote - India"), profile, us).pass)
+        // With no cities, on-site jobs are looked for in the first country.
+        val usAny = us.copy(remoteMode = RemoteMode.ANY)
+        assertTrue(HardFilter.evaluate(job("Senior Android Engineer", "Austin, US"), profile, usAny).pass)
+        assertFalse(HardFilter.evaluate(job("Senior Android Engineer", "Bengaluru, India"), profile, usAny).pass)
+        // Nothing chosen still means India, as before.
+        assertEquals(listOf("in"), Preferences().remoteFrom())
+    }
+
     // ---- Hard filter ----------------------------------------------------------------------
 
     @Test

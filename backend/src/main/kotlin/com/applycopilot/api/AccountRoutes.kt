@@ -116,6 +116,7 @@ fun Route.accountRoutes(deps: Deps) {
                 data = Events.data(
                     "roles" to preferences.roles, "locations" to preferences.locations,
                     "remoteMode" to preferences.remoteMode.dbValue, "needsVisaSponsorship" to preferences.needsVisaSponsorship,
+                    "remoteCountries" to preferences.remoteCountries,
                 ),
             )
         }

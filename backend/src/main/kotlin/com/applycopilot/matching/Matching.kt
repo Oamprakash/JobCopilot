@@ -90,7 +90,6 @@ object Locations {
         places.filter { it.isCountry }.associate { it.country to it.names } + ("sg" to listOf("singapore"))
 
     private val indiaWords: Set<String> = places.filter { it.country == "in" }.flatMap { it.names }.toSet() + setOf("india")
-    private val remoteRegions = setOf("apac", "asia", "anywhere", "worldwide", "global")
 
     private val wordRegexes = java.util.concurrent.ConcurrentHashMap<String, Regex>()
     private fun has(text: String, word: String) =
@@ -148,12 +147,63 @@ object Locations {
     fun isRemote(job: JobForMatching): Boolean =
         job.remote || job.location.lowercase().let { has(it, "remote") || it.contains("work from home") }
 
-    /** A remote job an India-based candidate can actually take. */
-    fun remoteForIndia(job: JobForMatching): Boolean {
-        if (!isRemote(job)) return false
-        val l = job.location.lowercase()
-        return mentionsIndia(l) || remoteRegions.any { has(l, it) }
+    /**
+     * Countries people can pick to work remotely from, with the names and regions job listings use for them.
+     * Display names are what the feed shows ("Remote, open to people in Canada").
+     */
+    private class RemoteCountry(val display: String, val names: List<String>, val regions: List<String>)
+
+    private val remoteCountries: Map<String, RemoteCountry> = linkedMapOf(
+        "in" to RemoteCountry("India", emptyList(), listOf("apac", "asia", "south asia")),
+        "us" to RemoteCountry("the United States", listOf("united states", "usa", "us", "u.s.", "united states of america"), listOf("americas", "north america", "us timezones")),
+        "ca" to RemoteCountry("Canada", listOf("canada"), listOf("americas", "north america")),
+        "gb" to RemoteCountry("the United Kingdom", listOf("united kingdom", "uk", "england", "scotland", "wales"), listOf("europe", "emea")),
+        "ie" to RemoteCountry("Ireland", listOf("ireland"), listOf("europe", "emea", "eu")),
+        "de" to RemoteCountry("Germany", listOf("germany", "deutschland"), listOf("europe", "emea", "eu", "dach")),
+        "nl" to RemoteCountry("the Netherlands", listOf("netherlands", "the netherlands", "holland"), listOf("europe", "emea", "eu")),
+        "fr" to RemoteCountry("France", listOf("france"), listOf("europe", "emea", "eu")),
+        "es" to RemoteCountry("Spain", listOf("spain"), listOf("europe", "emea", "eu")),
+        "pt" to RemoteCountry("Portugal", listOf("portugal"), listOf("europe", "emea", "eu")),
+        "pl" to RemoteCountry("Poland", listOf("poland"), listOf("europe", "emea", "eu")),
+        "ae" to RemoteCountry("the UAE", listOf("uae", "united arab emirates", "dubai"), listOf("emea", "middle east", "gcc")),
+        "sg" to RemoteCountry("Singapore", listOf("singapore"), listOf("apac", "asia", "southeast asia")),
+        "my" to RemoteCountry("Malaysia", listOf("malaysia"), listOf("apac", "asia", "southeast asia")),
+        "ph" to RemoteCountry("the Philippines", listOf("philippines"), listOf("apac", "asia", "southeast asia")),
+        "jp" to RemoteCountry("Japan", listOf("japan"), listOf("apac", "asia")),
+        "au" to RemoteCountry("Australia", listOf("australia"), listOf("apac", "oceania", "anz")),
+        "nz" to RemoteCountry("New Zealand", listOf("new zealand"), listOf("apac", "oceania", "anz")),
+        "br" to RemoteCountry("Brazil", listOf("brazil", "brasil"), listOf("americas", "latam", "latin america", "south america")),
+        "mx" to RemoteCountry("Mexico", listOf("mexico"), listOf("americas", "latam", "latin america", "north america")),
+    )
+
+    private val globalWords = listOf("anywhere", "worldwide", "global")
+
+    /** Country codes people can choose for remote work. */
+    val remoteCountryCodes: Set<String> get() = remoteCountries.keys
+
+    /** Whether [location] names country [code] (any of its names, or a known city in it). India also counts its cities. */
+    fun inCountry(code: String, location: String): Boolean {
+        val l = location.lowercase()
+        if (code == "in") return mentionsIndia(l)
+        val names = remoteCountries[code]?.names.orEmpty() + countryNames[code].orEmpty() + places.filter { it.country == code }.flatMap { it.names }
+        return names.any { has(l, it) }
     }
+
+    /** The first of [countries] a remote job is open to, "worldwide" for a job open anywhere, or null if it fits none. */
+    fun remoteOpenTo(job: JobForMatching, countries: List<String>): String? {
+        if (!isRemote(job)) return null
+        val l = job.location.lowercase()
+        if (globalWords.any { has(l, it) }) return "worldwide"
+        return countries.firstOrNull { code ->
+            inCountry(code, l) || remoteCountries[code]?.regions.orEmpty().any { has(l, it) }
+        }
+    }
+
+    /** "India", "the United States", ...: how the feed names a remote-work country. */
+    fun remoteCountryName(code: String): String = remoteCountries[code]?.display ?: code.uppercase()
+
+    /** A remote job an India-based candidate can actually take. */
+    fun remoteForIndia(job: JobForMatching): Boolean = remoteOpenTo(job, listOf("in")) != null
 }
 
 // ---- Hard filter ----------------------------------------------------------------------------
@@ -220,8 +270,9 @@ object HardFilter {
         val cities = prefs.locations.filterNot { it.equals("remote", ignoreCase = true) }
         val acceptsRemote = prefs.remoteMode == RemoteMode.REMOTE || prefs.remoteMode == RemoteMode.ANY ||
             prefs.locations.any { it.equals("remote", ignoreCase = true) }
-        val cityMatch = if (cities.isEmpty()) Locations.mentionsIndia(job.location) else cities.any { Locations.cityMatches(it, job.location) }
-        val remoteOk = acceptsRemote && Locations.remoteForIndia(job)
+        val home = prefs.remoteFrom().first()
+        val cityMatch = if (cities.isEmpty()) Locations.inCountry(home, job.location) else cities.any { Locations.cityMatches(it, job.location) }
+        val remoteOk = acceptsRemote && Locations.remoteOpenTo(job, prefs.remoteFrom()) != null
         val locationOk = when (prefs.remoteMode) {
             RemoteMode.REMOTE -> remoteOk
             RemoteMode.ONSITE, RemoteMode.HYBRID -> cityMatch || (remoteOk && prefs.locations.any { it.equals("remote", true) })
@@ -341,7 +392,10 @@ object HeuristicScorer {
             if (matched.isNotEmpty()) add(listSentence(matched.take(3)) + if (matched.size == 1) " matches your skills" else " match your skills")
             if (titleFit == 1.0) add("Title fits your target role")
             if (years != null && required != null && years >= required.first) add("Asks ${required.first}+ years; you have ${formatYears(years)}")
-            if (Locations.remoteForIndia(job)) add("Remote, open to India")
+            val openTo = Locations.remoteOpenTo(job, prefs.remoteFrom())
+            if (openTo == "worldwide") add("Remote, open worldwide")
+            else if (openTo == "in") add("Remote, open to India")
+            else if (openTo != null) add("Remote, open to people in ${Locations.remoteCountryName(openTo)}")
             else prefs.locations.firstOrNull { Locations.cityMatches(it, job.location) }?.let { add("In $it, one of your locations") }
         }.take(3)
 

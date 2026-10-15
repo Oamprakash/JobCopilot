@@ -473,3 +473,10 @@ details.notice summary::marker { color: var(--warn); }
   .matching-step.active .matching-dot { animation: none; border-color: var(--primary); }
   .skeleton { animation: none; }
 }
+
+/* Remote-work countries */
+.remote-countries { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.remote-countries legend { padding: 0; margin-bottom: 2px; font-weight: 600; font-size: 13px; }
+.chip-toggle { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; padding: 5px 11px; min-height: 32px; cursor: pointer; }
+.chip-toggle[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.chip-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
