@@ -27,16 +27,7 @@ object SearchQueries {
     val ADZUNA_COUNTRIES = setOf("at", "au", "be", "br", "ca", "ch", "de", "es", "fr", "gb", "in", "it", "mx", "nl", "nz", "pl", "sg", "us", "za")
 
     fun forUser(profile: Profile, prefs: Preferences, home: String = "in", supported: Set<String> = ADZUNA_COUNTRIES): List<SearchQuery> {
-        val roles = prefs.roles.ifEmpty { listOf(profile.headline) }.filter { it.isNotBlank() }
-        val keywords = roles
-            .map { role ->
-                val core = HardFilter.coreRoleTokens(Preferences(roles = listOf(role)), profile).sorted()
-                // A role made only of generic words ("Software Engineer") searches as written.
-                core.ifEmpty { HardFilter.tokens(role) }.joinToString(" ")
-            }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(MAX_ROLES)
+        val keywords = roleKeywords(profile, prefs)
         val cities = prefs.locations.filterNot { it.equals("remote", ignoreCase = true) }.map { it.trim() }.filter { it.isNotEmpty() }
         val wheres: List<Pair<String, String>> = when {
             prefs.remoteMode == RemoteMode.REMOTE || cities.isEmpty() -> listOf("" to home)
@@ -47,6 +38,29 @@ object SearchQueries {
         }
         return keywords.flatMap { what -> wheres.map { (where, country) -> SearchQuery(what.lowercase(), where.lowercase(), country) } }
     }
+
+    /**
+     * Remote-job searches (Himalayas) for users who'd take a remote job: one per role, open to candidates in
+     * [country]. Users who want only on-site or hybrid work get none, since every Himalayas job is remote.
+     */
+    fun remoteFor(profile: Profile, prefs: Preferences, country: String = "in"): List<SearchQuery> {
+        val acceptsRemote = prefs.remoteMode == RemoteMode.REMOTE || prefs.remoteMode == RemoteMode.ANY ||
+            prefs.locations.any { it.equals("remote", ignoreCase = true) }
+        if (!acceptsRemote) return emptyList()
+        return roleKeywords(profile, prefs).map { SearchQuery(it.lowercase(), "", country) }
+    }
+
+    /** Each target role as its distinctive words, the ones the role filter keys on. */
+    private fun roleKeywords(profile: Profile, prefs: Preferences): List<String> =
+        prefs.roles.ifEmpty { listOf(profile.headline) }.filter { it.isNotBlank() }
+            .map { role ->
+                val core = HardFilter.coreRoleTokens(Preferences(roles = listOf(role)), profile).sorted()
+                // A role made only of generic words ("Software Engineer") searches as written.
+                core.ifEmpty { HardFilter.tokens(role) }.joinToString(" ")
+            }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(MAX_ROLES)
 
     /** Every user's searches, most wanted first, without repeats. */
     fun merge(perUser: List<List<SearchQuery>>): List<SearchQuery> =

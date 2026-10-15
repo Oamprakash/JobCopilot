@@ -284,7 +284,7 @@ function JobCard({ job, onMove }: { job: FeedJob; onMove: (job: FeedJob, to: Mat
         <div>
           <h3 className="job-title">{job.title}</h3>
           <p className="muted small" style={{ margin: "4px 0 0" }}>
-            {[job.company, job.location || null, job.remote ? "Remote" : null, posted(job.postedAt)].filter(Boolean).join(" · ")}
+            {[job.company, job.location || null, job.remote && !/remote/i.test(job.location) ? "Remote" : null, posted(job.postedAt)].filter(Boolean).join(" · ")}
             {job.closed && <span className="badge-closed">No longer open</span>}
           </p>
           <SourceAttribution source={job.source ?? ""} />

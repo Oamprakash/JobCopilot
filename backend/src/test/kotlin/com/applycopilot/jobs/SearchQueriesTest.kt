@@ -68,4 +68,19 @@ class SearchQueriesTest {
         )
         assertEquals(emptyList<SearchQuery>(), SearchQueries.forUser(profile, Preferences(locations = listOf("Dubai", "Kuala Lumpur"))))
     }
+
+    @Test
+    fun remoteSearchesOnlyForUsersWhoTakeRemoteWork() {
+        val roles = listOf("Senior Android Engineer", "Android Developer")
+        assertEquals(
+            listOf(SearchQuery("android", "", "in")),
+            SearchQueries.remoteFor(profile, Preferences(roles = roles, locations = listOf("Chennai"))),
+        )
+        assertEquals(emptyList(), SearchQueries.remoteFor(profile, Preferences(roles = roles, remoteMode = RemoteMode.ONSITE)))
+        // On-site, but "Remote" listed as a place: remote jobs are welcome.
+        assertEquals(
+            listOf(SearchQuery("android", "", "in")),
+            SearchQueries.remoteFor(profile, Preferences(roles = listOf("Android Engineer"), locations = listOf("Chennai", "Remote"), remoteMode = RemoteMode.HYBRID)),
+        )
+    }
 }

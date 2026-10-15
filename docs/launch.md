@@ -69,6 +69,7 @@ Follow [chrome-web-store.md](chrome-web-store.md). It needs the live `https://yo
 ## 8. Before you invite the public
 
 - [ ] Read `/privacy` and `/terms` end to end. They're written to match how the app works, but they aren't legal advice; have a lawyer look before taking payments or scaling up.
+- [ ] Before charging users, confirm commercial use of the Himalayas API with hi@himalayas.app (the API asks only for a link back; the site terms limit commercial reuse of site content).
 - [ ] Ask Adzuna about a commercial licence (their free key is for development and personal use beyond a 14-day trial), or remove `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`.
 - [ ] Trademark search for the name at IP India (ipindiaonline.gov.in).
 - [ ] Remove test accounts from the admin user list if you don't want them in your numbers.

@@ -6,7 +6,7 @@ import com.applycopilot.api.AdminUserDetailDto
 import com.applycopilot.api.AdminUsersResponse
 import com.applycopilot.api.ClientEventRequest
 import com.applycopilot.api.CountedValueDto
-import com.applycopilot.api.AdzunaStatusDto
+import com.applycopilot.api.SourceStatusDto
 import com.applycopilot.api.EnabledRequest
 import com.applycopilot.api.FeedResponse
 import com.applycopilot.api.FeedbackListResponse
@@ -72,6 +72,9 @@ class FeedApiTest {
     /** Every Adzuna search the app made, in order. */
     private val adzunaCalls = mutableListOf<io.ktor.http.Url>()
 
+    /** Every Himalayas search the app made, in order. */
+    private val himalayasCalls = mutableListOf<io.ktor.http.Url>()
+
     private fun mockHttp() = HttpClient(
         MockEngine { request ->
             when (request.url.host) {
@@ -81,6 +84,10 @@ class FeedApiTest {
                 "api.adzuna.com" -> {
                     adzunaCalls += request.url
                     respond(BoardFixtures.adzuna, HttpStatusCode.OK, json)
+                }
+                "himalayas.app" -> {
+                    himalayasCalls += request.url
+                    respond(BoardFixtures.himalayas, HttpStatusCode.OK, json)
                 }
                 "api.anthropic.com" -> {
                     val body = (request.body as TextContent).text
@@ -350,11 +357,11 @@ class FeedApiTest {
         // Admins can switch Adzuna off: no more calls, and its jobs leave New (saved ones stay saved).
         val admin = newClient().also { it.signIn("admin@example.com") }
         assertEquals(HttpStatusCode.Forbidden, client.get("/admin/sources/adzuna").status)
-        val on = admin.get("/admin/sources/adzuna").body<AdzunaStatusDto>()
+        val on = admin.get("/admin/sources/adzuna").body<SourceStatusDto>()
         assertTrue(on.configured && on.enabled)
         assertEquals(3, on.callsToday)
         assertEquals(3, on.dailyLimit)
-        val off = admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(false)) }.body<AdzunaStatusDto>()
+        val off = admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(false)) }.body<SourceStatusDto>()
         assertFalse(off.enabled)
         assertFalse(client.feed().jobs.any { it.source == "adzuna" })
         assertFalse(client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.any { it.source == "adzuna" })
@@ -365,9 +372,45 @@ class FeedApiTest {
     }
 
     @Test
+    fun himalayasRemoteJobsJoinTheFeedForRemoteFriendlyUsers() = withApp { deps ->
+        deps.db.tx { c -> Companies.insert(c, "Himalayas", "himalayas", "remote") }
+        val client = newClient()
+        client.onboard(prefs)
+        val feed = client.post("/feed/refresh?weak=true").body<FeedResponse>()
+        assertEquals(listOf("android"), himalayasCalls.map { it.parameters["q"] })
+        assertTrue(himalayasCalls.all { it.parameters["country"] == "IN" })
+
+        val nimbus = feed.jobs.single { it.company == "Nimbus" }
+        assertEquals("himalayas", nimbus.source)
+        assertFalse(nimbus.descriptionPartial)
+        assertTrue(nimbus.applyUrl.startsWith("https://himalayas.app/"))
+        assertFalse(feed.jobs.any { it.company == "Stateside" || it.company == "Gone" }, "US-only and expired jobs are dropped")
+
+        // Fresh for 20 hours: another refresh doesn't search again.
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(experienceYears = 11.0)) }
+        client.post("/feed/refresh")
+        assertEquals(1, himalayasCalls.size)
+
+        // On-site-only users get no remote searches.
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs.copy(roles = listOf("iOS Engineer"), remoteMode = RemoteMode.ONSITE)) }
+        client.post("/feed/refresh")
+        assertEquals(1, himalayasCalls.size)
+
+        // Admins can switch it off: no calls, and its jobs leave New.
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        val on = admin.get("/admin/sources/himalayas").body<SourceStatusDto>()
+        assertTrue(on.configured && on.enabled)
+        assertEquals(1, on.callsToday)
+        admin.put("/admin/sources/himalayas") { contentType(ContentType.Application.Json); setBody(EnabledRequest(false)) }
+        client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs) }
+        assertFalse(client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.any { it.source == "himalayas" })
+        assertEquals(HttpStatusCode.NotFound, admin.get("/admin/sources/indeed").status)
+    }
+
+    @Test
     fun adzunaCantBeSwitchedOnWithoutKeys() = withApp { _ ->
         val admin = newClient().also { it.signIn("admin@example.com") }
-        val status = admin.get("/admin/sources/adzuna").body<AdzunaStatusDto>()
+        val status = admin.get("/admin/sources/adzuna").body<SourceStatusDto>()
         assertFalse(status.configured)
         assertFalse(status.enabled)
         assertEquals(HttpStatusCode.Conflict, admin.put("/admin/sources/adzuna") { contentType(ContentType.Application.Json); setBody(EnabledRequest(true)) }.status)

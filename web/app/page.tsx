@@ -39,7 +39,7 @@ const faqs = [
     q: "Will it make things up to impress recruiters?",
     a: "No. Every line in a tailored resume comes from your own profile. A check runs on every draft and removes any claim, number or skill your profile doesn't show, and tells you what it removed.",
   },
-  { q: "Where do the jobs come from?", a: "Public job boards of companies that hire through Greenhouse, Lever and Ashby, plus licensed job search results. Each job links to the original posting." },
+  { q: "Where do the jobs come from?", a: "Public job boards of companies that hire through Greenhouse, Lever and Ashby, remote jobs from Himalayas, plus licensed job search results. Each job links to the original posting." },
   { q: "What does it cost?", a: "It's free during the beta. A paid plan with unlimited tailoring may come later; you'll hear about it before anything changes." },
   {
     q: "What happens to my data?",

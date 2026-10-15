@@ -102,8 +102,9 @@ export type AdminOverview = {
   topLocations: Counted[];
   topAppliedCompanies: Counted[];
 };
-/** Adzuna job search as admins control it. configured: API keys set on the server; enabled: switched on. */
-export type AdzunaStatus = {
+/** A job aggregator as admins control it. configured: anything it needs is set on the server; enabled: switched on. */
+export type JobSource = "adzuna" | "himalayas";
+export type SourceStatus = {
   configured: boolean;
   enabled: boolean;
   callsToday: number;
@@ -167,7 +168,7 @@ export type FeedJob = {
   scorer: "claude" | "heuristic";
   status: MatchStatus;
   closed: boolean;
-  /** A board ("greenhouse", ...) or "adzuna". */
+  /** A board ("greenhouse", ...) or an aggregator ("adzuna", "himalayas"). */
   source?: string;
   /** Only a summary of the description is available. */
   descriptionPartial?: boolean;
@@ -388,8 +389,8 @@ export const api = {
   adminFeedback: (status?: "new") => request<{ items: FeedbackItem[]; newCount: number }>(`/admin/feedback${status ? `?status=${status}` : ""}`),
   setFeedbackStatus: (id: string, status: "new" | "done") =>
     request<{ ok: boolean }>(`/admin/feedback/${id}`, { method: "PUT", body: json({ status }) }),
-  adzunaStatus: () => request<AdzunaStatus>("/admin/sources/adzuna"),
-  setAdzuna: (enabled: boolean) => request<AdzunaStatus>("/admin/sources/adzuna", { method: "PUT", body: json({ enabled }) }),
+  sourceStatus: (source: JobSource) => request<SourceStatus>(`/admin/sources/${source}`),
+  setSource: (source: JobSource, enabled: boolean) => request<SourceStatus>(`/admin/sources/${source}`, { method: "PUT", body: json({ enabled }) }),
 
   getPreferences: () => request<Preferences>("/preferences"),
   savePreferences: (preferences: Preferences) =>

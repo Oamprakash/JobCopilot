@@ -10,6 +10,7 @@ import com.applycopilot.auth.ResendMailer
 import com.applycopilot.config.AppConfig
 import com.applycopilot.db.Db
 import com.applycopilot.jobs.AdzunaClient
+import com.applycopilot.jobs.HimalayasClient
 import com.applycopilot.jobs.AtsClient
 import com.applycopilot.jobs.IngestionService
 import com.applycopilot.matching.AutocompleteService
@@ -66,6 +67,8 @@ class Deps(
                     AtsClient(http),
                     adzuna = config.adzuna?.let { AdzunaClient(http, it) },
                     adzunaDailyCalls = config.adzuna?.dailyCalls ?: 0,
+                    himalayas = HimalayasClient(http),
+                    himalayasDailyCalls = config.himalayasDailyCalls,
                 ),
                 matching = MatchingService(db, scorer),
                 tailor = TailorService(db, config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }, config.freeTailorLimit),

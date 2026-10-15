@@ -52,7 +52,7 @@ data class FeedJobDto(
     val scorer: String,
     val status: String,
     val closed: Boolean,
-    /** Where the job came from: a board ("greenhouse", ...) or "adzuna". Aggregator jobs carry its attribution. */
+    /** Where the job came from: a board ("greenhouse", ...) or an aggregator ("adzuna", "himalayas"). Aggregator jobs carry its attribution. */
     val source: String = "",
     /** True when only a summary of the description is available. */
     val descriptionPartial: Boolean = false,
@@ -131,11 +131,12 @@ data class AddCompanyRequest(val name: String, val ats: String, val boardToken: 
 data class ActiveRequest(val active: Boolean)
 
 /**
- * The Adzuna job search as admins see it. [configured]: the API keys are set on the server.
- * [enabled]: admins have it switched on. Off means no Adzuna calls, and its jobs stop appearing as new matches.
+ * An aggregator (Adzuna, Himalayas) as admins see it. [configured]: anything it needs is set on the server
+ * (Adzuna's keys; Himalayas needs none). [enabled]: admins have it switched on. Off means no calls to it, and
+ * its jobs stop appearing as new matches.
  */
 @Serializable
-data class AdzunaStatusDto(
+data class SourceStatusDto(
     val configured: Boolean,
     val enabled: Boolean,
     val callsToday: Int,
@@ -323,27 +324,28 @@ fun Route.adminRoutes(deps: Deps) {
             call.respond(OkResponse())
         }
 
-        get("/sources/adzuna") {
+        get("/sources/{source}") {
             call.requireAdmin(deps)
-            call.respond(deps.adzunaStatus())
+            call.respond(deps.sourceStatus(sourceParam(call.parameters["source"])))
         }
 
-        put("/sources/adzuna") {
+        put("/sources/{source}") {
             call.requireSameOrigin(deps.config)
             call.requireAdmin(deps)
+            val source = sourceParam(call.parameters["source"])
             val enabled = call.receive<EnabledRequest>().enabled
-            if (enabled && deps.config.adzuna == null) {
+            if (enabled && source == IngestionService.ADZUNA && deps.config.adzuna == null) {
                 throw ApiException(HttpStatusCode.Conflict, "Set ADZUNA_APP_ID and ADZUNA_APP_KEY on the server first")
             }
             deps.db.tx { c ->
-                val row = Companies.all(c).firstOrNull { it.ats == IngestionService.ADZUNA }
-                    ?: Companies.insert(c, "Adzuna", IngestionService.ADZUNA, "in")
-                    ?: error("Adzuna source row missing")
+                val row = Companies.all(c).firstOrNull { it.ats == source }
+                    ?: Companies.insert(c, SOURCE_NAMES.getValue(source), source, SOURCE_TOKENS.getValue(source))
+                    ?: error("$source source row missing")
                 Companies.setActive(c, row.id, enabled)
             }
             deps.autocomplete.invalidate()
-            LoggerFactory.getLogger("Admin").info("Admin {} switched Adzuna {}", call.userId(), if (enabled) "on" else "off")
-            call.respond(deps.adzunaStatus())
+            LoggerFactory.getLogger("Admin").info("Admin {} switched {} {}", call.userId(), source, if (enabled) "on" else "off")
+            call.respond(deps.sourceStatus(source))
         }
 
         post("/ingest") {
@@ -356,13 +358,20 @@ fun Route.adminRoutes(deps: Deps) {
     }
 }
 
-private suspend fun Deps.adzunaStatus(): AdzunaStatusDto = db.tx { c ->
-    val row = Companies.all(c).firstOrNull { it.ats == IngestionService.ADZUNA }
-    AdzunaStatusDto(
-        configured = config.adzuna != null,
-        enabled = row?.active == true && config.adzuna != null,
-        callsToday = com.applycopilot.db.AggregatorQueries.callsToday(c, IngestionService.ADZUNA),
-        dailyLimit = config.adzuna?.dailyCalls ?: 0,
+private val SOURCE_NAMES = mapOf(IngestionService.ADZUNA to "Adzuna", IngestionService.HIMALAYAS to "Himalayas")
+private val SOURCE_TOKENS = mapOf(IngestionService.ADZUNA to "in", IngestionService.HIMALAYAS to "remote")
+
+private fun sourceParam(raw: String?): String =
+    raw?.lowercase()?.takeIf { it in IngestionService.AGGREGATORS } ?: throw ApiException(HttpStatusCode.NotFound, "Unknown job source")
+
+private suspend fun Deps.sourceStatus(source: String): SourceStatusDto = db.tx { c ->
+    val row = Companies.all(c).firstOrNull { it.ats == source }
+    val configured = source != IngestionService.ADZUNA || config.adzuna != null
+    SourceStatusDto(
+        configured = configured,
+        enabled = row?.active == true && configured,
+        callsToday = com.applycopilot.db.AggregatorQueries.callsToday(c, source),
+        dailyLimit = if (source == IngestionService.ADZUNA) config.adzuna?.dailyCalls ?: 0 else config.himalayasDailyCalls,
         openJobs = row?.openJobs ?: 0,
         lastSyncedAt = row?.lastSyncedAt?.toString(),
         lastError = row?.lastError,

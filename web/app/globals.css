@@ -162,6 +162,7 @@ h2 { font-size: 16px; margin: 0; }
   font-size: 12px; color: var(--ink); text-decoration: none;
 }
 .attribution strong { color: #1a9b3f; font-size: 14px; letter-spacing: -0.01em; }
+.attribution-himalayas strong { color: var(--ink); }
 
 .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .badge-good { background: var(--good-soft); color: var(--good); }

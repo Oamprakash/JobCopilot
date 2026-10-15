@@ -50,6 +50,8 @@ data class AppConfig(
     val eventRetentionDays: Int = 180,
     /** Adzuna job search, used when both ADZUNA_APP_ID and ADZUNA_APP_KEY are set. */
     val adzuna: AdzunaConfig? = null,
+    /** Searches a day against Himalayas' free remote-jobs API (HIMALAYAS_DAILY_CALLS). Its admin switch turns it off. */
+    val himalayasDailyCalls: Int = 120,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -92,6 +94,7 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                himalayasDailyCalls = env["HIMALAYAS_DAILY_CALLS"]?.toIntOrNull()?.coerceAtLeast(0) ?: 120,
                 appName = appName,
                 digestHour = (env["DIGEST_HOUR"]?.toIntOrNull() ?: 8).coerceIn(0, 23),
                 digestTimeZone = env["DIGEST_TIMEZONE"]?.takeIf { it.isNotBlank() } ?: "Asia/Kolkata",

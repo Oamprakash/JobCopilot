@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, type AdminOverview, type AdminUser, type AdzunaStatus, type Counted, type FeedbackItem, type WaitlistEntry } from "@/lib/api";
+import { api, type AdminOverview, type AdminUser, type JobSource, type SourceStatus, type Counted, type FeedbackItem, type WaitlistEntry } from "@/lib/api";
 import { ago, eventLabels, funnelLabels } from "@/lib/adminFormat";
 import { useMe } from "@/lib/useMe";
 
@@ -271,21 +271,48 @@ function FeedbackList() {
   );
 }
 
-/** The Adzuna switch: off means no Adzuna calls, and its jobs stop showing as new matches and in daily emails. */
+const SOURCES: { id: JobSource; name: string; off: string; unconfigured: string }[] = [
+  {
+    id: "himalayas",
+    name: "Himalayas remote jobs",
+    off: "Off · no Himalayas searches; its remote jobs are hidden from new matches and daily emails. Saved jobs stay saved.",
+    unconfigured: "",
+  },
+  {
+    id: "adzuna",
+    name: "Adzuna job search",
+    off: "Off · no Adzuna searches; its jobs are hidden from new matches and daily emails. Saved jobs stay saved.",
+    unconfigured: "Add ADZUNA_APP_ID and ADZUNA_APP_KEY on Render to use it.",
+  },
+];
+
+/** Aggregator switches: off means no calls to that source, and its jobs stop showing as new matches and in daily emails. */
 function JobSources() {
-  const [status, setStatus] = useState<AdzunaStatus | null>(null);
+  return (
+    <section className="card stack" style={{ gap: 12 }}>
+      <h2>Job sources</h2>
+      {SOURCES.map((s) => (
+        <SourceSwitch key={s.id} source={s} />
+      ))}
+      <p className="muted small" style={{ margin: 0 }}>Company job boards (Greenhouse, Lever, Ashby) aren&apos;t affected by these switches.</p>
+    </section>
+  );
+}
+
+function SourceSwitch({ source }: { source: (typeof SOURCES)[number] }) {
+  const [status, setStatus] = useState<SourceStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
-    api.adzunaStatus().then(setStatus).catch(setError);
-  }, []);
+    api.sourceStatus(source.id).then(setStatus).catch(setError);
+  }, [source.id]);
 
   async function toggle(enabled: boolean) {
     setBusy(true);
     setError(null);
     try {
-      setStatus(await api.setAdzuna(enabled));
+      setStatus(await api.setSource(source.id, enabled));
     } catch (e) {
       setError(e);
     } finally {
@@ -293,40 +320,36 @@ function JobSources() {
     }
   }
 
+  if (error && !status) return <Problems error={error} />;
+  if (!status) return <p className="muted small" style={{ margin: 0 }}>Loading…</p>;
   return (
-    <section className="card stack" style={{ gap: 12 }}>
-      <h2>Job sources</h2>
+    <div className="stack" style={{ gap: 6 }}>
       <Problems error={error} />
-      {!status ? (
-        <p className="muted small" style={{ margin: 0 }}>Loading…</p>
-      ) : (
-        <div className="source-row">
-          <div className="stack" style={{ gap: 4, minWidth: 0 }}>
-            <strong>Adzuna job search</strong>
-            <span className="muted small">
-              {!status.configured
-                ? "Add ADZUNA_APP_ID and ADZUNA_APP_KEY on Render to use it."
-                : status.enabled
-                  ? `On · ${status.openJobs.toLocaleString()} open jobs · ${status.callsToday} of ${status.dailyLimit} searches used today${status.lastSyncedAt ? ` · last search ${ago(status.lastSyncedAt)}` : ""}`
-                  : "Off · no Adzuna searches; its jobs are hidden from new matches and daily emails. Saved jobs stay saved."}
-            </span>
-            {status.enabled && status.lastError && <span className="small" style={{ color: "var(--bad)" }}>Last error: {status.lastError}</span>}
-          </div>
-          <label className="switch">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={status.enabled}
-              disabled={busy || !status.configured}
-              onChange={(e) => toggle(e.target.checked)}
-              aria-label="Adzuna job search"
-            />
-            <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
-          </label>
+      <div className="source-row">
+        <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+          <strong>{source.name}</strong>
+          <span className="muted small">
+            {!status.configured
+              ? source.unconfigured
+              : status.enabled
+                ? `On · ${status.openJobs.toLocaleString()} open jobs · ${status.callsToday} of ${status.dailyLimit} searches used today${status.lastSyncedAt ? ` · last search ${ago(status.lastSyncedAt)}` : ""}`
+                : source.off}
+          </span>
+          {status.enabled && status.lastError && <span className="small" style={{ color: "var(--bad)" }}>Last error: {status.lastError}</span>}
         </div>
-      )}
-      <p className="muted small" style={{ margin: 0 }}>Company job boards (Greenhouse, Lever, Ashby) aren&apos;t affected by this switch.</p>
-    </section>
+        <label className="switch">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={status.enabled}
+            disabled={busy || !status.configured}
+            onChange={(e) => toggle(e.target.checked)}
+            aria-label={source.name}
+          />
+          <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
+        </label>
+      </div>
+    </div>
   );
 }
 

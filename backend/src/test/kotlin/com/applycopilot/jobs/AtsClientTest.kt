@@ -174,4 +174,42 @@ class AtsClientTest {
         val e = assertFailsWith<AtsException> { adzuna.search(SearchQuery("android", "")) }
         assertTrue(e.message!!.contains("app id or key"), e.message)
     }
+
+    @Test
+    fun parsesHimalayasRemoteJobsOpenToIndia() = runBlocking {
+        val calls = mutableListOf<io.ktor.http.Url>()
+        val himalayas = HimalayasClient(
+            HttpClient(
+                MockEngine { request ->
+                    calls += request.url
+                    respond(BoardFixtures.himalayas, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+                },
+            ),
+        )
+        val page = himalayas.search(SearchQuery("android", "", "in"), page = 2)
+        val url = calls.single()
+        assertEquals("/jobs/api/search", url.encodedPath)
+        assertEquals("android", url.parameters["q"])
+        assertEquals("IN", url.parameters["country"])
+        assertEquals("2", url.parameters["page"])
+        assertEquals(5, page.total)
+        assertEquals(listOf("Senior Android Engineer", "Android Developer"), page.postings.map { it.title })
+
+        val nimbus = page.postings[0]
+        assertEquals("Nimbus", nimbus.employer)
+        assertEquals("Remote (India, Philippines)", nimbus.location)
+        assertTrue(nimbus.remote)
+        assertFalse(nimbus.partial)
+        assertTrue(nimbus.description.startsWith("Build our Android app"))
+        assertTrue(nimbus.applyUrl.startsWith("https://himalayas.app/"), "links back to Himalayas, as its terms ask")
+        assertTrue(nimbus.postedAt != null)
+        assertEquals("Remote (worldwide)", page.postings[1].location)
+    }
+
+    @Test
+    fun himalayasRateLimitIsExplained() = runBlocking {
+        val himalayas = HimalayasClient(HttpClient(MockEngine { respond("{}", HttpStatusCode.TooManyRequests) }))
+        val e = assertFailsWith<AtsException> { himalayas.search(SearchQuery("android", "")) }
+        assertEquals("Himalayas rate limit reached (429)", e.message)
+    }
 }

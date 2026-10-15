@@ -108,4 +108,32 @@ object BoardFixtures {
           {"id": "4810004", "title": "No link", "description": "Dropped: no redirect_url."}
         ]}
     """.trimIndent()
+
+    /**
+     * One Himalayas search page: a job open to India, a worldwide one, a US-only one (dropped), an expired one
+     * (dropped) and one without a link (dropped). Dates are Unix milliseconds, as Himalayas sends them.
+     */
+    val himalayas: String get() {
+        val now = System.currentTimeMillis()
+        val day = 86_400_000L
+        return """
+        {"updatedAt": $now, "offset": 0, "limit": 20, "totalCount": 5, "jobs": [
+          {"guid": "https://himalayas.app/companies/nimbus/jobs/senior-android-engineer", "title": "Senior Android Engineer",
+           "companyName": "Nimbus", "companySlug": "nimbus", "employmentType": "Full Time", "seniority": ["Senior"],
+           "locationRestrictions": [{"alpha2": "IN", "name": "India", "slug": "india"}, {"alpha2": "PH", "name": "Philippines", "slug": "philippines"}],
+           "description": "<p>Build our <b>Android</b> app with Kotlin, Jetpack Compose and Coroutines. 8+ years of Android experience.</p>",
+           "pubDate": ${now - day}, "expiryDate": ${now + 30 * day},
+           "applicationLink": "https://himalayas.app/companies/nimbus/jobs/senior-android-engineer"},
+          {"guid": "hm-2", "title": "Android Developer", "companyName": "Orbit", "locationRestrictions": [],
+           "description": "<p>Kotlin and Android work, fully remote.</p>", "pubDate": ${now - 2 * day},
+           "applicationLink": "https://himalayas.app/companies/orbit/jobs/android-developer"},
+          {"guid": "hm-3", "title": "Android Engineer (US only)", "companyName": "Stateside",
+           "locationRestrictions": [{"alpha2": "US", "name": "United States", "slug": "united-states"}],
+           "description": "<p>US residents only.</p>", "applicationLink": "https://himalayas.app/companies/stateside/jobs/android"},
+          {"guid": "hm-4", "title": "Android Lead", "companyName": "Gone", "locationRestrictions": [],
+           "description": "<p>Closed.</p>", "expiryDate": ${now - day}, "applicationLink": "https://himalayas.app/companies/gone/jobs/android-lead"},
+          {"guid": "hm-5", "title": "No link", "companyName": "Nowhere", "description": "<p>Dropped.</p>"}
+        ]}
+        """.trimIndent()
+    }
 }
