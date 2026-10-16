@@ -49,6 +49,10 @@ export default function PrivacyPage() {
             <td>To invite you when there&apos;s room, with one email. Ask us at any time and we&apos;ll remove it.</td>
           </tr>
           <tr>
+            <td>If you tell us what you&apos;d pay for unlimited tailoring: your answer and optional note</td>
+            <td>To decide whether to offer a paid plan and at what price, and to tell you first if one launches. Nothing is charged.</td>
+          </tr>
+          <tr>
             <td>Feedback you send from the app, with the page you sent it from</td>
             <td>To fix problems and decide what to improve. Only our administrators read it.</td>
           </tr>

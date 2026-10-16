@@ -43,7 +43,7 @@ class TailorService(
             if (existing == null && user.plan == "free" && Applications.createdThisMonth(c, userId) >= freeMonthlyLimit) {
                 throw ApiException(
                     HttpStatusCode.PaymentRequired,
-                    "The free plan includes $freeMonthlyLimit tailored applications a month. Upgrade to Pro for unlimited tailoring.",
+                    "You've used this month's $freeMonthlyLimit free tailored applications. More open at the start of next month.",
                 )
             }
             val description = when {

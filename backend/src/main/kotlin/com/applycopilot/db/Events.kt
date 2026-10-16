@@ -34,6 +34,8 @@ object EventTypes {
     const val DIGEST_UNSUBSCRIBED = "digest_unsubscribed"
     const val INTERVIEW_PREP = "interview_prep"
     const val FEEDBACK_SENT = "feedback_sent"
+    const val TAILOR_LIMIT_REACHED = "tailor_limit_reached"
+    const val PRO_INTEREST = "pro_interest"
     /** Audit trail: an admin opened a user's activity. Recorded against the admin. */
     const val ADMIN_VIEWED_USER = "admin_viewed_user"
 

@@ -137,7 +137,15 @@ fun Route.applicationRoutes(deps: Deps) {
             val userId = call.userId()
             val jobId = jobIdParam(call.parameters["jobId"])
             val request = runCatching { call.receive<TailorRequest>() }.getOrDefault(TailorRequest())
-            val stored = deps.tailor.tailor(userId, jobId, request.questions, request.jobDescription)
+            val stored = try {
+                deps.tailor.tailor(userId, jobId, request.questions, request.jobDescription)
+            } catch (e: ApiException) {
+                // Reaching the free limit is recorded on its own (the tailoring transaction rolled back), for the admin page.
+                if (e.status == HttpStatusCode.PaymentRequired) {
+                    runCatching { deps.db.tx { c -> Events.record(c, userId, EventTypes.TAILOR_LIMIT_REACHED, jobId) } }
+                }
+                throw e
+            }
             call.respond(
                 deps.db.tx { c ->
                     Events.record(

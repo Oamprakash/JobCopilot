@@ -12,6 +12,9 @@ import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
 import com.applycopilot.api.ManualJobRequest
 import com.applycopilot.api.PairCodeResponse
+import com.applycopilot.api.ProInterestDto
+import com.applycopilot.api.ProInterestRequest
+import com.applycopilot.api.ProInterestSummaryDto
 import com.applycopilot.api.PairRequest
 import com.applycopilot.api.PairResponse
 import com.applycopilot.api.ResumeUploadResponse
@@ -344,7 +347,7 @@ class TailorApiTest {
     }
 
     @Test
-    fun freePlanLimitCountsNewApplicationsOnly() = withApp(mapOf("FREE_TAILOR_LIMIT" to "1")) {
+    fun freePlanLimitCountsNewApplicationsOnly() = withApp(mapOf("FREE_TAILOR_LIMIT" to "1", "ADMIN_EMAILS" to "oam@example.com")) {
         val client = newClient()
         val jobs = client.onboardAndFeed()
         val first = jobs.getValue("Senior Android Engineer")
@@ -353,6 +356,17 @@ class TailorApiTest {
         assertEquals(HttpStatusCode.PaymentRequired, client.tailor(second).status)
         assertEquals(HttpStatusCode.OK, client.tailor(first).status, "regenerating doesn't count again")
         assertEquals(UsageDto("free", 1, 1), client.get("/usage").body<UsageDto>())
+
+        // At the limit we ask what they'd pay (nothing is charged), and admins see the answers.
+        assertEquals(ProInterestDto(null, null), client.get("/pro-interest").body<ProInterestDto>())
+        assertEquals(HttpStatusCode.BadRequest, client.put("/pro-interest") { contentType(ContentType.Application.Json); setBody(ProInterestRequest("free_forever")) }.status)
+        client.put("/pro-interest") { contentType(ContentType.Application.Json); setBody(ProInterestRequest("month_199")) }
+        val answer = client.put("/pro-interest") { contentType(ContentType.Application.Json); setBody(ProInterestRequest("pass_499", "  Worth it during notice period  ")) }
+        assertEquals(ProInterestDto("pass_499", "Worth it during notice period"), answer.body<ProInterestDto>())
+        val summary = client.get("/admin/pro-interest").body<ProInterestSummaryDto>()
+        assertEquals(1, summary.limitReachedUsers)
+        assertEquals(mapOf("month_199" to 0, "pass_499" to 1, "year_999" to 0, "no" to 0), summary.choices)
+        assertEquals("Worth it during notice period", summary.notes.single().note)
     }
 
     @Test

@@ -119,6 +119,14 @@ export type SourceStatus = {
   lastSyncedAt: string | null;
   lastError: string | null;
 };
+/** What a free user said they'd pay for unlimited tailoring. Nothing is charged. */
+export type ProChoice = "month_199" | "pass_499" | "year_999" | "no";
+export type ProInterestSummary = {
+  windowDays: number;
+  limitReachedUsers: number;
+  choices: Record<ProChoice, number>;
+  notes: { email: string; choice: ProChoice; note: string; at: string }[];
+};
 export type WaitlistStatus = "waiting" | "invited" | "open";
 export type WaitlistEntry = {
   id: string;
@@ -399,6 +407,10 @@ export const api = {
   site: () => request<{ inviteOnly: boolean }>("/site"),
   joinWaitlist: (email: string, note?: string, acquisition?: Acquisition) =>
     request<{ status: WaitlistStatus }>("/waitlist", { method: "POST", body: json({ email, note: note || null, acquisition: acquisition ?? null }) }),
+  proInterest: () => request<{ choice: ProChoice | null; note: string | null }>("/pro-interest"),
+  saveProInterest: (choice: ProChoice, note?: string) =>
+    request<{ choice: ProChoice | null; note: string | null }>("/pro-interest", { method: "PUT", body: json({ choice, note: note || null }) }),
+  adminProInterest: () => request<ProInterestSummary>("/admin/pro-interest"),
   reportAcquisition: (acquisition: Acquisition) => request<{ ok: boolean }>("/me/acquisition", { method: "PUT", body: json(acquisition) }),
   adminWaitlist: () => request<{ items: WaitlistEntry[]; waiting: number; invited: number }>("/admin/waitlist"),
   inviteFromWaitlist: (id: string) => request<WaitlistEntry>(`/admin/waitlist/${id}/invite`, { method: "POST" }),

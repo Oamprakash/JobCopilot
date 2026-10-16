@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Problems } from "@/components/Problems";
-import { api, type AdminOverview, type AdminUser, type JobSource, type SourceStatus, type Counted, type FeedbackItem, type WaitlistEntry } from "@/lib/api";
+import { api, type AdminOverview, type AdminUser, type JobSource, type SourceStatus, type Counted, type FeedbackItem, type ProInterestSummary, type WaitlistEntry } from "@/lib/api";
+import { proChoices } from "@/components/ProInterest";
 import { ago, eventLabels, funnelLabels } from "@/lib/adminFormat";
 import { useMe } from "@/lib/useMe";
 
@@ -96,6 +97,7 @@ export default function AdminPage() {
             </div>
 
             <SourcesCard overview={overview} />
+            <ProInterestCard />
           </>
         )}
 
@@ -448,6 +450,50 @@ function SourcesCard({ overview }: { overview: AdminOverview }) {
       <p className="hint" style={{ margin: 0 }}>
         Tag links you share so they&apos;re told apart: trulyapply.com/?utm_source=instagram&amp;utm_medium=bio. Links from Reddit, Google,
         LinkedIn and X are recognised without tags.
+      </p>
+    </section>
+  );
+}
+
+/** Demand for a paid plan: who ran out of free tailoring, and what they said they'd pay. Nobody is charged. */
+function ProInterestCard() {
+  const [s, setS] = useState<ProInterestSummary | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => {
+    api.adminProInterest().then(setS).catch(setError);
+  }, []);
+  if (error) return <Problems error={error} />;
+  if (!s) return null;
+  const answers = Object.values(s.choices).reduce((a, b) => a + b, 0);
+  const wouldPay = answers - (s.choices.no ?? 0);
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2>Interest in a paid plan</h2>
+      <div className="kv">
+        <span>Reached the free limit, {s.windowDays} days</span>
+        <strong>{s.limitReachedUsers}</strong>
+      </div>
+      <div className="kv">
+        <span>Answered &ldquo;what would you pay?&rdquo; (all time)</span>
+        <strong>{answers}</strong>
+      </div>
+      {answers > 0 &&
+        proChoices.map((c) => (
+          <Bar key={c.value} label={c.label} value={s.choices[c.value] ?? 0} max={answers} />
+        ))}
+      {s.notes.length > 0 && (
+        <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 0, gap: 8 }}>
+          {s.notes.map((n) => (
+            <li key={n.email + n.at} className="small">
+              &ldquo;{n.note}&rdquo; <span className="muted">· {proChoices.find((c) => c.value === n.choice)?.label} · {n.email} · {ago(n.at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="hint" style={{ margin: 0 }}>
+        {answers < 10
+          ? "Too few answers to decide on yet. Around 10 or more people saying they'd pay is a good sign to add payments."
+          : `${wouldPay} of ${answers} said they'd pay.`}
       </p>
     </section>
   );

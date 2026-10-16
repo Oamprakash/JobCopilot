@@ -480,3 +480,10 @@ details.notice summary::marker { color: var(--warn); }
 .chip-toggle { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; padding: 5px 11px; min-height: 32px; cursor: pointer; }
 .chip-toggle[aria-pressed="true"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
 .chip-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* What would you pay */
+.pro-choices { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pro-choices legend { padding: 0; margin-bottom: 4px; font-weight: 600; font-size: 15px; }
+.pro-choice { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; }
+.pro-choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.pro-choice input { margin-top: 2px; accent-color: var(--primary); }

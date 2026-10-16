@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { ProInterest } from "@/components/ProInterest";
 import { PartialDescriptionNote, SourceAttribution } from "@/components/SourceAttribution";
 import { Problems } from "@/components/Problems";
 import {
@@ -131,6 +132,9 @@ export default function ApplyPage() {
             <h1>Monthly limit reached</h1>
             <p className="muted" style={{ margin: 0 }}>{limitHit}</p>
             <p className="small muted" style={{ margin: 0 }}>Jobs you&apos;ve already tailored stay open to review, edit and download.</p>
+          </section>
+          <section className="card stack">
+            <ProInterest />
           </section>
         </main>
       </>
