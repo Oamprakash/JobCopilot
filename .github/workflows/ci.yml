@@ -108,6 +108,10 @@ jobs:
           for i in $(seq 1 90); do curl -fsS http://localhost:10000/api/health >/dev/null 2>&1 && break; sleep 2; done
           curl -fsS http://localhost:10000/api/health | grep -q ok || fail "API health through the web app did not answer"
           curl -fsS http://localhost:10000/login | grep -q "TrulyApply" || fail "Login page did not render"
+          curl -fsS http://localhost:10000/robots.txt | grep -q "Sitemap: https://trulyapply.com/sitemap.xml" || fail "robots.txt missing"
+          curl -fsS http://localhost:10000/sitemap.xml | grep -q "<loc>https://trulyapply.com/</loc>" || fail "sitemap.xml missing"
+          curl -fsS http://localhost:10000/ | grep -q 'property="og:image"' || fail "Home page has no link preview image"
+          curl -fsS http://localhost:10000/ | grep -q 'application/ld+json' || fail "Home page has no structured data"
           code=$(curl -s -o /tmp/ml.json -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
             -H 'Content-Type: application/json' -H 'Origin: http://localhost:10000' -d '{"email":"friend@example.com"}')
           test "$code" = 200 || fail "magic-link returned $code: $(head -c 300 /tmp/ml.json)"

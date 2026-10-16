@@ -4,6 +4,8 @@
  */
 export const brand = {
   name: "TrulyApply",
+  /** The public address, for search engines and link previews. */
+  siteUrl: "https://trulyapply.com",
   tagline: "Find well-matched jobs, tailor every application, and stay in control of what you send.",
   /** Where users write about their data or a grievance (shown in the privacy policy and terms). */
   contactEmail: "hello@trulyapply.com",

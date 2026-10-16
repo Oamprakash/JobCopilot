@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 import { brand } from "@/lib/brand";
 
-export const metadata: Metadata = { title: `Privacy policy · ${brand.name}` };
+export const metadata: Metadata = { title: "Privacy policy", alternates: { canonical: "/privacy" } };
 
 export default function PrivacyPage() {
   const mail = <a href={`mailto:${brand.contactEmail}`}>{brand.contactEmail}</a>;
