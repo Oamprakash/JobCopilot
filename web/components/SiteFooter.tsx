@@ -8,6 +8,7 @@ export function SiteFooter() {
       <Link href="/privacy">Privacy</Link>
       <Link href="/terms">Terms</Link>
       <a href={`mailto:${brand.contactEmail}`}>Contact</a>
+      <a href={brand.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
     </footer>
   );
 }

@@ -7,6 +7,8 @@ export const brand = {
   tagline: "Find well-matched jobs, tailor every application, and stay in control of what you send.",
   /** Where users write about their data or a grievance (shown in the privacy policy and terms). */
   contactEmail: "hello@trulyapply.com",
+  /** Social profiles linked from the footer. */
+  instagram: "https://www.instagram.com/trulyapplyhq/",
   /** The person or business that runs the service, as it should appear in the privacy policy and terms. */
   operator: "Oamprakash R",
   /** Courts that handle disputes under the terms. */
