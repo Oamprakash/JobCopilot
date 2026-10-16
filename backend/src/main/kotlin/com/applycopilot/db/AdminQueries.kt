@@ -7,6 +7,8 @@ import java.time.LocalDate
 import java.util.UUID
 
 data class CountedValue(val value: String, val count: Int)
+/** New users from one source in the window, and how many of them went on to make a profile and tailor an application. */
+data class SourceFunnel(val source: String, val signups: Int, val profiles: Int, val tailored: Int)
 data class DayActivity(val day: LocalDate, val activeUsers: Int, val newUsers: Int, val events: Int)
 
 data class Overview(
@@ -21,6 +23,10 @@ data class Overview(
     val topRoles: List<CountedValue>,
     val topLocations: List<CountedValue>,
     val topAppliedCompanies: List<CountedValue>,
+    /** Where new users came from ("unknown" when the browser didn't say), most signups first. */
+    val sources: List<SourceFunnel> = emptyList(),
+    /** Where people joining the waitlist came from. */
+    val waitlistSources: List<CountedValue> = emptyList(),
 )
 
 data class UserSummary(
@@ -37,6 +43,9 @@ data class UserSummary(
     val tailored: Int,
     val approved: Int,
     val applyClicks: Int,
+    val source: String? = null,
+    val campaign: String? = null,
+    val referrer: String? = null,
 )
 
 data class UserApplicationRow(val jobId: UUID, val title: String, val company: String, val status: String, val updatedAt: Instant, val applyUrl: String)
@@ -86,7 +95,33 @@ object AdminQueries {
             "applyClicked" to everDid(EventTypes.APPLY_CLICKED),
         )
 
+        // A waitlist entry's source wins: it's from their first visit, before the invite email brought them back.
+        val sources = c.prepareStatement(
+            """
+            SELECT x.src, count(*),
+                   count(*) FILTER (WHERE EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = x.id)),
+                   count(*) FILTER (WHERE EXISTS (SELECT 1 FROM applications a WHERE a.user_id = x.id))
+            FROM (
+                SELECT u.id, coalesce(w.acq_source, u.acq_source, 'unknown') AS src
+                FROM users u LEFT JOIN waitlist w ON w.email = u.email
+                WHERE u.created_at > now() - make_interval(days => ?)
+            ) x
+            GROUP BY x.src ORDER BY count(*) DESC, x.src LIMIT 15
+            """.trimIndent(),
+        ).use { st ->
+            st.setInt(1, windowDays)
+            st.executeQuery().use { rs -> buildList { while (rs.next()) add(SourceFunnel(rs.getString(1), rs.getInt(2), rs.getInt(3), rs.getInt(4))) } }
+        }
+
         return Overview(
+            sources = sources,
+            waitlistSources = counted(
+                """
+                SELECT coalesce(acq_source, 'unknown') AS src, count(*) FROM waitlist
+                WHERE created_at > now() - make_interval(days => ?) GROUP BY src ORDER BY count(*) DESC, src LIMIT 15
+                """.trimIndent(),
+                windowDays,
+            ),
             totalUsers = int("SELECT count(*) FROM users"),
             newUsers = int("SELECT count(*) FROM users WHERE created_at > now() - make_interval(days => ?)", windowDays),
             activeUsers7 = int("SELECT count(DISTINCT e.user_id) FROM events e WHERE $ACTIVITY AND e.created_at > now() - interval '7 days'"),
@@ -118,12 +153,14 @@ object AdminQueries {
         (SELECT count(*) FROM events e WHERE e.user_id = u.id AND e.type = '${EventTypes.FEED_REFRESHED}'),
         (SELECT count(*) FROM applications a WHERE a.user_id = u.id),
         (SELECT count(*) FROM applications a WHERE a.user_id = u.id AND a.approved_at IS NOT NULL),
-        (SELECT count(*) FROM events e WHERE e.user_id = u.id AND e.type = '${EventTypes.APPLY_CLICKED}')
+        (SELECT count(*) FROM events e WHERE e.user_id = u.id AND e.type = '${EventTypes.APPLY_CLICKED}'),
+        coalesce(w.acq_source, u.acq_source), coalesce(w.acq_campaign, u.acq_campaign), coalesce(w.acq_referrer, u.acq_referrer)
     """
     private const val USER_FROM = """
         FROM users u
         LEFT JOIN LATERAL (SELECT profile_json FROM profiles WHERE user_id = u.id ORDER BY version DESC LIMIT 1) p ON true
         LEFT JOIN preferences pr ON pr.user_id = u.id
+        LEFT JOIN waitlist w ON w.email = u.email
     """
 
     /** Users, most recently active first. [query] matches email or name. */
@@ -189,5 +226,8 @@ object AdminQueries {
         tailored = getInt(11),
         approved = getInt(12),
         applyClicks = getInt(13),
+        source = getString(14),
+        campaign = getString(15),
+        referrer = getString(16),
     )
 }

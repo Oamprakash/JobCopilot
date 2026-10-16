@@ -20,6 +20,9 @@ import java.util.UUID
 data class CountedValueDto(val value: String, val count: Int)
 
 @Serializable
+data class SourceFunnelDto(val source: String, val signups: Int, val profiles: Int, val tailored: Int)
+
+@Serializable
 data class DayActivityDto(val day: String, val activeUsers: Int, val newUsers: Int, val events: Int)
 
 @Serializable
@@ -35,6 +38,8 @@ data class AdminOverviewDto(
     val topRoles: List<CountedValueDto>,
     val topLocations: List<CountedValueDto>,
     val topAppliedCompanies: List<CountedValueDto>,
+    val sources: List<SourceFunnelDto> = emptyList(),
+    val waitlistSources: List<CountedValueDto> = emptyList(),
 )
 
 @Serializable
@@ -52,6 +57,9 @@ data class AdminUserDto(
     val tailored: Int,
     val approved: Int,
     val applyClicks: Int,
+    val source: String? = null,
+    val campaign: String? = null,
+    val referrer: String? = null,
 )
 
 @Serializable
@@ -73,7 +81,7 @@ data class AdminUserDetailDto(
 
 private fun UserSummary.toDto() = AdminUserDto(
     id.toString(), email, plan, createdAt.toString(), lastSeenAt?.toString(), name, headline, roles, locations,
-    refreshes, tailored, approved, applyClicks,
+    refreshes, tailored, approved, applyClicks, source, campaign, referrer,
 )
 
 /**
@@ -99,6 +107,8 @@ fun Route.adminDashboardRoutes(deps: Deps) {
                     topRoles = o.topRoles.map { CountedValueDto(it.value, it.count) },
                     topLocations = o.topLocations.map { CountedValueDto(it.value, it.count) },
                     topAppliedCompanies = o.topAppliedCompanies.map { CountedValueDto(it.value, it.count) },
+                    sources = o.sources.map { SourceFunnelDto(it.source, it.signups, it.profiles, it.tailored) },
+                    waitlistSources = o.waitlistSources.map { CountedValueDto(it.value, it.count) },
                 ),
             )
         }

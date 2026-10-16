@@ -94,6 +94,8 @@ export default function AdminPage() {
               <TopList title="Most searched locations" items={overview.topLocations} empty="No searches yet" />
               <TopList title={`Companies applied to, ${overview.windowDays} days`} items={overview.topAppliedCompanies} empty="No clicks to apply yet" />
             </div>
+
+            <SourcesCard overview={overview} />
           </>
         )}
 
@@ -173,6 +175,7 @@ function WaitlistSection() {
                   <strong style={{ overflowWrap: "anywhere" }}>{w.email}</strong>
                   <span className="muted small">
                     {w.status === "invited" && w.invitedAt ? `Invited ${ago(w.invitedAt)} · joined ${ago(w.createdAt)}` : `Joined ${ago(w.createdAt)}`}
+                    {w.source ? ` · via ${w.source}` : ""}
                   </span>
                   {w.note && <span className="small">&ldquo;{w.note}&rdquo;</span>}
                 </div>
@@ -400,6 +403,56 @@ function DailyBars({ days }: { days: AdminOverview["days"] }) {
   );
 }
 
+/**
+ * Which channels bring people, and whether they stick: new users per source with how many made a profile and
+ * tailored an application. "unknown" is anyone whose browser didn't record a first visit (blocked storage, or
+ * signed up before tracking began).
+ */
+function SourcesCard({ overview }: { overview: AdminOverview }) {
+  const rows = overview.sources ?? [];
+  const waitlist = overview.waitlistSources ?? [];
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2>Where new users came from, {overview.windowDays} days</h2>
+      {rows.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>No new users in this period.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th className="num">Signed up</th>
+                <th className="num">Made a profile</th>
+                <th className="num">Tailored</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.source}>
+                  <td>{r.source}</td>
+                  <td className="num">{r.signups}</td>
+                  <td className="num">{r.profiles}</td>
+                  <td className="num">{r.tailored}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {waitlist.length > 0 && (
+        <p className="small" style={{ margin: 0 }}>
+          <strong>Waitlist:</strong> {waitlist.map((w) => `${w.value} ${w.count}`).join(" · ")}
+        </p>
+      )}
+      <p className="hint" style={{ margin: 0 }}>
+        Tag links you share so they&apos;re told apart: trulyapply.com/?utm_source=instagram&amp;utm_medium=bio. Links from Reddit, Google,
+        LinkedIn and X are recognised without tags.
+      </p>
+    </section>
+  );
+}
+
 function TopList({ title, items, empty }: { title: string; items: Counted[]; empty: string }) {
   return (
     <section className="card stack" style={{ gap: 8 }}>
@@ -472,7 +525,10 @@ function UsersTable() {
                   <Link href={`/admin/users/${u.id}`} style={{ fontWeight: 600 }}>{u.name ?? u.email}</Link>
                   <span className="hint" style={{ display: "block" }}>{u.name ? u.email : u.headline ?? ""}{u.plan === "pro" ? " · Pro" : ""}</span>
                 </td>
-                <td className="nowrap">{ago(u.lastSeenAt ?? u.createdAt)}</td>
+                <td className="nowrap">
+                  {ago(u.lastSeenAt ?? u.createdAt)}
+                  {u.source && <span className="hint" style={{ display: "block" }}>via {u.source}</span>}
+                </td>
                 <td>
                   {u.roles.join(", ") || <span className="muted">No roles</span>}
                   <span className="hint" style={{ display: "block" }}>{u.locations.join(", ")}</span>

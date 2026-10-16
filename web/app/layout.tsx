@@ -1,3 +1,4 @@
+import { AcquisitionCapture } from "@/components/AcquisitionCapture";
 import { SiteFooter } from "@/components/SiteFooter";
 import { brand } from "@/lib/brand";
 import type { Metadata } from "next";
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={sans.variable}>
       <body>
+        <AcquisitionCapture />
         {children}
         <SiteFooter />
       </body>

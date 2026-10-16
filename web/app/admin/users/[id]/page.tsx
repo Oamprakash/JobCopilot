@@ -72,6 +72,8 @@ export default function AdminUserPage() {
                 </section>
                 <section className="card stack" style={{ gap: 8 }}>
                   <h2>Totals</h2>
+                  <div className="kv"><span>Found us via</span><strong>{u.source ? [u.source, u.campaign].filter(Boolean).join(" · ") : "Unknown"}</strong></div>
+                  {u.referrer && <div className="kv"><span>Referring site</span><strong>{u.referrer}</strong></div>}
                   <div className="kv"><span>Feed refreshes</span><strong>{u.refreshes}</strong></div>
                   <div className="kv"><span>Applications tailored</span><strong>{u.tailored}</strong></div>
                   <div className="kv"><span>Approved</span><strong>{u.approved}</strong></div>

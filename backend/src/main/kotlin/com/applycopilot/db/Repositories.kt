@@ -37,6 +37,26 @@ object Users {
             st.executeQuery().use { rs -> if (rs.next()) rs.toUser() else null }
         }
 
+    /**
+     * Records how the user found the site, once: only while it's unset and the account is under a day old, so a
+     * later visit from somewhere else never rewrites where an existing user came from. Returns true when stored.
+     */
+    fun setAcquisition(c: Connection, id: UUID, a: com.applycopilot.core.Acquisition): Boolean =
+        c.prepareStatement(
+            """
+            UPDATE users SET acq_source = ?, acq_medium = ?, acq_campaign = ?, acq_referrer = ?, acq_landing = ?
+            WHERE id = ? AND acq_source IS NULL AND created_at > now() - interval '1 day'
+            """.trimIndent(),
+        ).use { st ->
+            st.setString(1, a.source)
+            st.setString(2, a.medium)
+            st.setString(3, a.campaign)
+            st.setString(4, a.referrer)
+            st.setString(5, a.landing)
+            st.setObject(6, id)
+            st.executeUpdate() > 0
+        }
+
     /** Locks the user's row so concurrent profile saves get consecutive version numbers. */
     fun lock(c: Connection, id: UUID): Boolean =
         c.prepareStatement("SELECT 1 FROM users WHERE id = ? FOR UPDATE").use { st ->

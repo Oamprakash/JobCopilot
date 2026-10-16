@@ -1,3 +1,4 @@
+import type { Acquisition } from "./acquisition";
 // Types mirror the Kotlin DTOs in backend/src/main/kotlin/com/applycopilot/{core,api}.
 
 export type Experience = {
@@ -103,6 +104,9 @@ export type AdminOverview = {
   topRoles: Counted[];
   topLocations: Counted[];
   topAppliedCompanies: Counted[];
+  /** New users in the window by where they came from, and how many made a profile and tailored an application. */
+  sources?: { source: string; signups: number; profiles: number; tailored: number }[];
+  waitlistSources?: Counted[];
 };
 /** A job aggregator as admins control it. configured: anything it needs is set on the server; enabled: switched on. */
 export type JobSource = "adzuna" | "himalayas";
@@ -116,7 +120,15 @@ export type SourceStatus = {
   lastError: string | null;
 };
 export type WaitlistStatus = "waiting" | "invited" | "open";
-export type WaitlistEntry = { id: string; email: string; note: string | null; status: "waiting" | "invited"; createdAt: string; invitedAt: string | null };
+export type WaitlistEntry = {
+  id: string;
+  email: string;
+  note: string | null;
+  status: "waiting" | "invited";
+  createdAt: string;
+  invitedAt: string | null;
+  source?: string | null;
+};
 export type FeedbackKind = "idea" | "problem" | "praise" | "other";
 export type FeedbackItem = {
   id: string;
@@ -142,6 +154,10 @@ export type AdminUser = {
   tailored: number;
   approved: number;
   applyClicks: number;
+  /** Where they first came from ("reddit", "instagram", "direct"...); null when the browser didn't say. */
+  source?: string | null;
+  campaign?: string | null;
+  referrer?: string | null;
 };
 export type AdminEvent = { type: string; at: string; jobId: string | null; jobTitle: string | null; company: string | null; data: Record<string, unknown> };
 export type AdminUserDetail = {
@@ -381,8 +397,9 @@ export const api = {
     request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
   site: () => request<{ inviteOnly: boolean }>("/site"),
-  joinWaitlist: (email: string, note?: string) =>
-    request<{ status: WaitlistStatus }>("/waitlist", { method: "POST", body: json({ email, note: note || null }) }),
+  joinWaitlist: (email: string, note?: string, acquisition?: Acquisition) =>
+    request<{ status: WaitlistStatus }>("/waitlist", { method: "POST", body: json({ email, note: note || null, acquisition: acquisition ?? null }) }),
+  reportAcquisition: (acquisition: Acquisition) => request<{ ok: boolean }>("/me/acquisition", { method: "PUT", body: json(acquisition) }),
   adminWaitlist: () => request<{ items: WaitlistEntry[]; waiting: number; invited: number }>("/admin/waitlist"),
   inviteFromWaitlist: (id: string) => request<WaitlistEntry>(`/admin/waitlist/${id}/invite`, { method: "POST" }),
   removeFromWaitlist: (id: string) => request<{ ok: boolean }>(`/admin/waitlist/${id}`, { method: "DELETE" }),

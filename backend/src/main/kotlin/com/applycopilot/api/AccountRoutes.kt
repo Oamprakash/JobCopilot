@@ -44,6 +44,15 @@ fun Route.accountRoutes(deps: Deps) {
         call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile, user.email in deps.config.adminEmails))
     }
 
+    // Where a new user found the site, sent once by the browser after their first sign-in. Ignored for older accounts.
+    put("/me/acquisition") {
+        call.requireSameOrigin(deps.config)
+        val userId = call.userId()
+        val acquisition = com.applycopilot.core.AcquisitionRules.normalize(call.receive<com.applycopilot.core.Acquisition>(), deps.ownHosts())
+        deps.db.tx { c -> Users.setAcquisition(c, userId, acquisition) }
+        call.respond(OkResponse())
+    }
+
     // One-step account deletion (DPDP Act): the user row cascades to every table, then files are removed.
     delete("/me") {
         call.requireSameOrigin(deps.config)

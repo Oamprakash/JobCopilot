@@ -22,19 +22,26 @@ import java.util.UUID
 data class SiteDto(val inviteOnly: Boolean)
 
 @Serializable
-data class JoinWaitlistRequest(val email: String, val note: String? = null)
+data class JoinWaitlistRequest(val email: String, val note: String? = null, val acquisition: com.applycopilot.core.Acquisition? = null)
 
 /** "waiting": on the list. "invited": this email can sign in now. "open": sign-up isn't invite-only, so just sign in. */
 @Serializable
 data class JoinWaitlistResponse(val status: String)
 
 @Serializable
-data class WaitlistEntryDto(val id: String, val email: String, val note: String?, val status: String, val createdAt: String, val invitedAt: String?)
+data class WaitlistEntryDto(
+    val id: String, val email: String, val note: String?, val status: String, val createdAt: String, val invitedAt: String?,
+    val source: String? = null,
+)
 
 @Serializable
 data class WaitlistResponse(val items: List<WaitlistEntryDto>, val waiting: Int, val invited: Int)
 
-private fun WaitlistEntry.toDto() = WaitlistEntryDto(id.toString(), email, note, status, createdAt.toString(), invitedAt?.toString())
+private fun WaitlistEntry.toDto() = WaitlistEntryDto(id.toString(), email, note, status, createdAt.toString(), invitedAt?.toString(), source)
+
+/** Hosts of this site, so links from our own pages don't count as a referrer. */
+internal fun Deps.ownHosts(): Set<String> =
+    config.allowedOrigins.mapNotNull { runCatching { java.net.URI(it).host?.lowercase()?.removePrefix("www.") }.getOrNull() }.toSet()
 
 /** Sign-up is invite-only in preview mode with an invite list (INVITE_EMAILS); preview without one is open to anyone. */
 internal fun Deps.inviteOnly() = config.publicPreview && config.inviteEmails.isNotEmpty()
@@ -56,7 +63,8 @@ fun Route.waitlistPublicRoutes(deps: Deps) {
             call.respond(JoinWaitlistResponse(if (deps.inviteOnly()) "invited" else "open"))
             return@post
         }
-        val entry = deps.db.tx { c -> Waitlist.join(c, email, note) }
+        val acquisition = request.acquisition?.let { com.applycopilot.core.AcquisitionRules.normalize(it, deps.ownHosts()) }
+        val entry = deps.db.tx { c -> Waitlist.join(c, email, note, acquisition) }
         call.respond(JoinWaitlistResponse(entry.status))
     }
 }

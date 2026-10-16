@@ -1,6 +1,9 @@
 package com.applycopilot
 
+import com.applycopilot.api.AdminOverviewDto
+import com.applycopilot.api.AdminUsersResponse
 import com.applycopilot.api.JoinWaitlistRequest
+import com.applycopilot.api.SourceFunnelDto
 import com.applycopilot.api.JoinWaitlistResponse
 import com.applycopilot.api.MagicLinkRequest
 import com.applycopilot.api.MagicLinkResponse
@@ -13,6 +16,7 @@ import com.applycopilot.api.VerifyRequest
 import com.applycopilot.api.WaitlistEntryDto
 import com.applycopilot.api.WaitlistResponse
 import com.applycopilot.config.AppConfig
+import com.applycopilot.core.Acquisition
 import com.applycopilot.core.Preferences
 import com.applycopilot.core.RemoteMode
 import io.ktor.client.HttpClient
@@ -171,12 +175,12 @@ class ApiTest {
     ) { deps ->
         val client = createClient { install(ContentNegotiation) { json(apiJson) } }
         suspend fun ask(email: String) = client.post("/auth/magic-link") { contentType(ContentType.Application.Json); setBody(MagicLinkRequest(email)) }
-        suspend fun join(email: String, note: String? = null) =
-            client.post("/waitlist") { contentType(ContentType.Application.Json); setBody(JoinWaitlistRequest(email, note)) }.body<JoinWaitlistResponse>().status
+        suspend fun join(email: String, note: String? = null, from: Acquisition? = null) =
+            client.post("/waitlist") { contentType(ContentType.Application.Json); setBody(JoinWaitlistRequest(email, note, from)) }.body<JoinWaitlistResponse>().status
 
         assertTrue(client.get("/site").body<SiteDto>().inviteOnly)
         assertEquals(HttpStatusCode.Forbidden, ask("stranger@example.com").status)
-        assertEquals("waiting", join(" Stranger@Example.com ", "Android roles in Pune"))
+        assertEquals("waiting", join(" Stranger@Example.com ", "Android roles in Pune", Acquisition(source = "Instagram", medium = "bio")))
         assertEquals("waiting", join("stranger@example.com"), "joining twice keeps one entry")
         assertEquals("invited", join("friend@example.com"), "people on INVITE_EMAILS can already sign in")
 
@@ -193,6 +197,7 @@ class ApiTest {
         val entry = list.items.single()
         assertEquals("stranger@example.com", entry.email)
         assertEquals("Android roles in Pune", entry.note)
+        assertEquals("instagram", entry.source)
 
         assertEquals("invited", admin.post("/admin/waitlist/${entry.id}/invite").body<WaitlistEntryDto>().status)
         val invite = (deps.mailer as com.applycopilot.auth.ConsoleMailer).invites.single()
@@ -203,6 +208,31 @@ class ApiTest {
 
         assertEquals(HttpStatusCode.OK, admin.delete("/admin/waitlist/${entry.id}").status)
         assertEquals(0, admin.get("/admin/waitlist").body<WaitlistResponse>().items.size)
+    }
+
+    @Test
+    fun newUsersRecordWhereTheyCameFromOnce() = withApp(mapOf("ADMIN_EMAILS" to "admin@example.com")) { deps ->
+        val client = newClient()
+        client.signIn("new@example.com")
+        suspend fun report(a: Acquisition) = client.put("/me/acquisition") { contentType(ContentType.Application.Json); setBody(a) }
+        assertEquals(HttpStatusCode.OK, report(Acquisition(referrer = "https://out.reddit.com/r/developersIndia/x", landing = "/?ref=1")).status)
+        report(Acquisition(source = "instagram")) // a later report never rewrites the first
+
+        // An account older than a day keeps "unknown": a visit today says nothing about how they found us back then.
+        val old = newClient()
+        old.signIn("old@example.com")
+        deps.db.tx { c -> c.createStatement().use { it.execute("UPDATE users SET created_at = now() - interval '3 days' WHERE email = 'old@example.com'") } }
+        old.put("/me/acquisition") { contentType(ContentType.Application.Json); setBody(Acquisition(source = "google")) }
+
+        val admin = newClient().also { it.signIn("admin@example.com") }
+        assertEquals(HttpStatusCode.Forbidden, client.get("/admin/overview").status)
+        val users = admin.get("/admin/users").body<AdminUsersResponse>().users
+        assertEquals("reddit", users.single { it.email == "new@example.com" }.source)
+        assertEquals("out.reddit.com", users.single { it.email == "new@example.com" }.referrer)
+        assertNull(users.single { it.email == "old@example.com" }.source)
+        val sources = admin.get("/admin/overview?days=30").body<AdminOverviewDto>().sources
+        assertEquals(SourceFunnelDto("reddit", 1, 0, 0), sources.single { it.source == "reddit" })
+        assertTrue(sources.none { it.source == "instagram" || it.source == "google" })
     }
 
     @Test

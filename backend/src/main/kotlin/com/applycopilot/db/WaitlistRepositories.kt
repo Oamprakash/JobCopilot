@@ -5,23 +5,33 @@ import java.sql.ResultSet
 import java.time.Instant
 import java.util.UUID
 
-data class WaitlistEntry(val id: UUID, val email: String, val note: String?, val status: String, val createdAt: Instant, val invitedAt: Instant?)
+data class WaitlistEntry(
+    val id: UUID, val email: String, val note: String?, val status: String, val createdAt: Instant, val invitedAt: Instant?,
+    /** How they found the site ("reddit", "instagram", "direct"...), when the browser told us. */
+    val source: String? = null,
+)
 
 object Waitlist {
-    private const val COLUMNS = "id, email, note, status, created_at, invited_at"
+    private const val COLUMNS = "id, email, note, status, created_at, invited_at, acq_source"
 
     /** Adds [email] (already normalized) or, if it's there, keeps it as is. Returns the entry. */
-    fun join(c: Connection, email: String, note: String?): WaitlistEntry =
+    fun join(c: Connection, email: String, note: String?, acquisition: com.applycopilot.core.Acquisition? = null): WaitlistEntry =
         c.prepareStatement(
             """
-            INSERT INTO waitlist (id, email, note) VALUES (?, ?, ?)
-            ON CONFLICT (email) DO UPDATE SET note = coalesce(waitlist.note, excluded.note)
+            INSERT INTO waitlist (id, email, note, acq_source, acq_medium, acq_campaign, acq_referrer) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (email) DO UPDATE SET note = coalesce(waitlist.note, excluded.note),
+                acq_source = coalesce(waitlist.acq_source, excluded.acq_source), acq_medium = coalesce(waitlist.acq_medium, excluded.acq_medium),
+                acq_campaign = coalesce(waitlist.acq_campaign, excluded.acq_campaign), acq_referrer = coalesce(waitlist.acq_referrer, excluded.acq_referrer)
             RETURNING $COLUMNS
             """.trimIndent(),
         ).use { st ->
             st.setObject(1, UUID.randomUUID())
             st.setString(2, email)
             st.setString(3, note)
+            st.setString(4, acquisition?.source)
+            st.setString(5, acquisition?.medium)
+            st.setString(6, acquisition?.campaign)
+            st.setString(7, acquisition?.referrer)
             st.executeQuery().use { rs -> rs.next(); rs.toEntry() }
         }
 
@@ -54,6 +64,6 @@ object Waitlist {
 
     private fun ResultSet.toEntry() = WaitlistEntry(
         getObject("id", UUID::class.java), getString("email"), getString("note"), getString("status"),
-        getTimestamp("created_at").toInstant(), getTimestamp("invited_at")?.toInstant(),
+        getTimestamp("created_at").toInstant(), getTimestamp("invited_at")?.toInstant(), getString("acq_source"),
     )
 }

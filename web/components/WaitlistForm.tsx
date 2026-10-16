@@ -1,5 +1,6 @@
 "use client";
 
+import { storedAcquisition } from "@/lib/acquisition";
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
 import { Problems } from "@/components/Problems";
@@ -22,7 +23,7 @@ export function WaitlistForm({ initialEmail = "", withNote = true }: { initialEm
     setBusy(true);
     setError(null);
     try {
-      setStatus((await api.joinWaitlist(email.trim(), note.trim())).status);
+      setStatus((await api.joinWaitlist(email.trim(), note.trim(), storedAcquisition())).status);
     } catch (err) {
       setError(err);
     } finally {

@@ -41,6 +41,10 @@ export default function PrivacyPage() {
             <td>To run the service, fix problems, prevent abuse and understand which features help. Our administrators can see this for each account; their own access to it is logged.</td>
           </tr>
           <tr>
+            <td>How you found us: the campaign tags in the link you first arrived from (such as utm_source=instagram), the name of the site that linked to us (such as reddit.com, never the page) and the first page you opened. Kept in your browser until you sign up or join the waitlist, then stored with your account or entry</td>
+            <td>To learn which places bring people who find the app useful, so we spend our time there. Our administrators can see it; it isn&apos;t shared or used for ads.</td>
+          </tr>
+          <tr>
             <td>If you join the waitlist: your email and the optional note you add</td>
             <td>To invite you when there&apos;s room, with one email. Ask us at any time and we&apos;ll remove it.</td>
           </tr>
