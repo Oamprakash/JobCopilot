@@ -487,3 +487,23 @@ details.notice summary::marker { color: var(--warn); }
 .pro-choice { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; }
 .pro-choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
 .pro-choice input { margin-top: 2px; accent-color: var(--primary); }
+
+/* Home page fit check */
+.landing-try { display: flex; flex-direction: column; gap: 20px; }
+.fitcheck-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 16px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.fitcheck-label { font-weight: 700; font-size: 14px; }
+.fitcheck-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 150px; padding: 16px; border: 2px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--bg); color: var(--ink); font: inherit; cursor: pointer; text-align: center; overflow-wrap: anywhere; }
+.fitcheck-drop:hover, .fitcheck-drop:focus-visible { border-color: var(--primary); background: var(--primary-soft); }
+.fitcheck-drop.has-file { border-style: solid; border-color: var(--good); background: var(--good-soft); }
+.fitcheck-submit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.fitcheck-form > .notice { grid-column: 1 / -1; }
+.fitcheck-line { padding: 10px 14px; border-left: 3px solid var(--primary); background: var(--bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 15px; }
+.fitcheck-line .bullet-original { margin: 0 0 6px; }
+.chip-missing { background: var(--warn-soft); color: var(--warn); font-weight: 500; padding: 6px 11px; }
+.fitcheck-cta { border-top: 1px solid var(--border); padding-top: 16px; }
+@media (max-width: 640px) {
+  .fitcheck-form { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .fitcheck-drop { min-height: 96px; }
+}
+.landing-try h2 { font-size: clamp(24px, 3vw, 30px); letter-spacing: -0.015em; margin: 0; }
+.landing-try .fitcheck-line p:not(.bullet-original), .landing-try .reasons li { color: var(--ink); }

@@ -41,6 +41,10 @@ export default function PrivacyPage() {
             <td>To run the service, fix problems, prevent abuse and understand which features help. Our administrators can see this for each account; their own access to it is logged.</td>
           </tr>
           <tr>
+            <td>If you check a job on the home page without an account: the resume file and job text you add</td>
+            <td>To show your fit for that job, once. Neither is kept on our servers. The details we read from your resume are kept in your browser for up to 3 hours, so you don&apos;t have to upload it again if you sign up; they&apos;re removed once you finish setting up.</td>
+          </tr>
+          <tr>
             <td>How you found us: the campaign tags in the link you first arrived from (such as utm_source=instagram), the name of the site that linked to us (such as reddit.com, never the page) and the first page you opened. Kept in your browser until you sign up or join the waitlist, then stored with your account or entry</td>
             <td>To learn which places bring people who find the app useful, so we spend our time there. Our administrators can see it; it isn&apos;t shared or used for ads.</td>
           </tr>

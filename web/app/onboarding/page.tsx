@@ -8,6 +8,7 @@ import { Problems } from "@/components/Problems";
 import { cleanProfile, ProfileEditor } from "@/components/ProfileEditor";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { api, emptyPreferences, type Preferences, type Profile, type ResumeUpload as Upload } from "@/lib/api";
+import { clearHandoff, takeHandoff } from "@/lib/fitCheckHandoff";
 import { useMe } from "@/lib/useMe";
 
 type Step = "upload" | "review" | "done";
@@ -39,12 +40,23 @@ export default function OnboardingPage() {
     window.scrollTo({ top: 0 });
   }, [step]);
 
+  // Coming from the home page's fit check: the resume was already read, so start at the review step.
+  const [fromFitCheck, setFromFitCheck] = useState(false);
+  useEffect(() => {
+    const h = takeHandoff();
+    if (!h) return;
+    setFromFitCheck(true);
+    onUploaded({ resumeFile: { id: "", fileName: h.fileName }, parser: "heuristic", profile: h.profile, removed: h.removed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function save() {
     if (!profile || !upload) return;
     setSaving(true);
     setError(null);
     try {
-      const saved = await api.saveProfile(cleanProfile(profile), upload.resumeFile.id);
+      const saved = await api.saveProfile(cleanProfile(profile), upload.resumeFile.id || undefined);
+      clearHandoff();
       await api.savePreferences(preferences);
       setVersion(saved.version);
       setStep("done");
@@ -111,6 +123,7 @@ export default function OnboardingPage() {
               <section className="card main">
                 <p className="small muted" style={{ marginTop: 0 }}>
                   From <strong>{upload.resumeFile.fileName}</strong>
+                  {fromFitCheck && ", the resume you used to check a job"}
                 </p>
                 <ProfileEditor value={profile} onChange={setProfile} />
               </section>
@@ -120,7 +133,16 @@ export default function OnboardingPage() {
                 <button type="button" className="btn btn-primary btn-block" onClick={save} disabled={saving}>
                   {saving ? "Saving…" : "Save my profile"}
                 </button>
-                <button type="button" className="btn btn-ghost" onClick={() => setStep("upload")} disabled={saving}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    clearHandoff();
+                    setFromFitCheck(false);
+                    setStep("upload");
+                  }}
+                  disabled={saving}
+                >
                   Upload a different resume
                 </button>
               </aside>

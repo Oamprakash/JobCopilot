@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/AppHeader";
+import { FitCheck } from "@/components/FitCheck";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { api } from "@/lib/api";
 import { brand } from "@/lib/brand";
@@ -91,9 +92,28 @@ export function LandingPage() {
               {brand.name} finds well-matched jobs every morning, tailors your resume and cover letter from your real experience, and
               fills in the application form. You check everything and press Submit yourself.
             </p>
-            <div id="start" className="landing-cta">{cta}</div>
+            <div className="landing-cta">
+              <a href="#try" className="btn btn-primary">Check a job against my resume</a>
+              <span className="muted small">Free, no sign-up, about a minute</span>
+            </div>
           </div>
           <ProductPreview />
+        </section>
+
+        <section id="try" className="landing-section landing-try">
+          <div className="stack" style={{ gap: 6 }}>
+            <h2>Try it on a real job</h2>
+            <p className="muted" style={{ margin: 0 }}>
+              Add your resume and paste a job you&apos;re interested in. See your fit score, the skills that match and the ones it
+              asks for that your resume doesn&apos;t show, and the lines that should lead your resume for it.
+            </p>
+          </div>
+          <FitCheck inviteOnly={inviteOnly} />
+        </section>
+
+        <section id="start" className="landing-section landing-start">
+          <h2>{inviteOnly ? "Or join the waitlist" : "Or start straight away"}</h2>
+          <div className="landing-cta">{cta}</div>
         </section>
 
         <section className="landing-promises" aria-label="Our promises">

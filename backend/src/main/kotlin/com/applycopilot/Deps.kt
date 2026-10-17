@@ -39,6 +39,9 @@ class Deps(
     val matching: MatchingService,
     val tailor: TailorService,
     val interviewPrep: InterviewPrepService,
+    /** The public fit check on the home page; rule-based only unless [create] gives it Claude. */
+    val fitCheck: com.applycopilot.tailoring.FitCheckService =
+        com.applycopilot.tailoring.FitCheckService(db, parsing, null, config.fitCheckDailyLimit, 0),
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
     val autocomplete = AutocompleteService(db)
@@ -55,13 +58,15 @@ class Deps(
             val db = Db(config)
             val claude = config.anthropicApiKey?.let { ClaudeResumeParser(http, it, config.claudeModel) }
             val scorer = config.anthropicApiKey?.let { ClaudeJobScorer(http, it, config.claudeScoringModel) }
+            val claudeTailor = config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }
+            val parsing = ResumeParsingService(claude)
             return Deps(
                 config = config,
                 db = db,
                 storage = config.objectStorage?.let { ObjectFileStorage(it) } ?: LocalFileStorage(config.storageDir),
                 mailer = config.mail?.let { ResendMailer(http, it) } ?: ConsoleMailer(),
                 jwt = JwtService(config.jwtSecret),
-                parsing = ResumeParsingService(claude),
+                parsing = parsing,
                 ingestion = IngestionService(
                     db,
                     AtsClient(http),
@@ -71,8 +76,9 @@ class Deps(
                     himalayasDailyCalls = config.himalayasDailyCalls,
                 ),
                 matching = MatchingService(db, scorer),
-                tailor = TailorService(db, config.anthropicApiKey?.let { ClaudeTailor(http, it, config.claudeModel) }, config.freeTailorLimit),
+                tailor = TailorService(db, claudeTailor, config.freeTailorLimit),
                 interviewPrep = InterviewPrepService(db, config.anthropicApiKey?.let { ClaudeInterviewPrep(http, it, config.claudeModel) }),
+                fitCheck = com.applycopilot.tailoring.FitCheckService(db, parsing, claudeTailor, config.fitCheckDailyLimit, config.fitCheckAiDailyLimit),
                 onClose = listOf(db, http),
             )
         }

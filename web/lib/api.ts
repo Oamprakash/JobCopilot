@@ -127,6 +127,18 @@ export type ProInterestSummary = {
   choices: Record<ProChoice, number>;
   notes: { email: string; choice: ProChoice; note: string; at: string }[];
 };
+/** The home page's no-sign-up check of one job against a resume. Nothing is stored on the server. */
+export type FitCheckResult = {
+  jobTitle: string;
+  score: number;
+  reasons: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  bullets: { original: string; tailored: string; reworded: boolean }[];
+  rewordedBy: "claude" | "heuristic";
+  profile: Profile;
+  removed: string[];
+};
 export type WaitlistStatus = "waiting" | "invited" | "open";
 export type WaitlistEntry = {
   id: string;
@@ -343,6 +355,13 @@ export const api = {
   me: () => request<Me>("/me"),
   deleteAccount: () => request<{ ok: boolean }>("/me", { method: "DELETE" }),
 
+  fitCheck: (file: File, description: string, title?: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("description", description);
+    if (title) form.append("title", title);
+    return request<FitCheckResult>("/try/fit-check", { method: "POST", body: form });
+  },
   uploadResume: (file: File) => {
     const form = new FormData();
     form.append("file", file);

@@ -52,6 +52,9 @@ data class AppConfig(
     val adzuna: AdzunaConfig? = null,
     /** Searches a day against Himalayas' free remote-jobs API (HIMALAYAS_DAILY_CALLS). Its admin switch turns it off. */
     val himalayasDailyCalls: Int = 120,
+    /** Home-page fit checks a day in all (FIT_CHECK_DAILY), and how many of those may use Claude (FIT_CHECK_AI_DAILY). */
+    val fitCheckDailyLimit: Int = 300,
+    val fitCheckAiDailyLimit: Int = 40,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -94,6 +97,8 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                fitCheckDailyLimit = env["FIT_CHECK_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 300,
+                fitCheckAiDailyLimit = env["FIT_CHECK_AI_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 40,
                 himalayasDailyCalls = env["HIMALAYAS_DAILY_CALLS"]?.toIntOrNull()?.coerceAtLeast(0) ?: 120,
                 appName = appName,
                 digestHour = (env["DIGEST_HOUR"]?.toIntOrNull() ?: 8).coerceIn(0, 23),

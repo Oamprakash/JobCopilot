@@ -236,6 +236,44 @@ class ApiTest {
     }
 
     @Test
+    fun anyoneCanCheckAJobAgainstTheirResumeWithoutSigningIn() = withApp(mapOf("FIT_CHECK_DAILY" to "2")) {
+        val client = createClient { install(ContentNegotiation) { json(apiJson) } }
+        val jd = """
+            Senior Android Engineer
+            Build our Android app in Kotlin with Jetpack Compose and Coroutines, and help us move to Kotlin Multiplatform.
+            You'll mentor a team of Android engineers, review code and work with Firebase and GraphQL APIs every day.
+            8+ years of Android experience. Offline-first apps with Room and WorkManager are a big plus.
+        """.trimIndent()
+        suspend fun check(description: String, ip: String = "203.0.113.7") = client.submitFormWithBinaryData(
+            url = "/try/fit-check",
+            formData = formData {
+                append("description", description)
+                append(
+                    "file", docx(RESUME),
+                    Headers.build {
+                        append(HttpHeaders.ContentType, "application/octet-stream")
+                        append(HttpHeaders.ContentDisposition, "filename=\"cv.docx\"")
+                    },
+                )
+            },
+        ) { header("X-Forwarded-For", "$ip, 10.0.0.1") }
+
+        assertEquals(HttpStatusCode.BadRequest, check("Android job").status, "a description that short can't be checked")
+        val response = check(jd)
+        assertEquals(HttpStatusCode.OK, response.status, response.bodyAsText())
+        val result = response.body<com.applycopilot.tailoring.FitCheckResult>()
+        assertEquals("Senior Android Engineer", result.jobTitle)
+        assertTrue(result.score > 0)
+        assertTrue(result.matchedSkills.contains("Kotlin"))
+        assertTrue(result.bullets.isNotEmpty())
+        assertEquals("heuristic", result.rewordedBy)
+        assertEquals("Oamprakash R", result.profile.fullName, "the profile comes back for onboarding")
+        // The daily cap (2 here) covers everyone; the short-description request above never reached it.
+        assertEquals(HttpStatusCode.OK, check(jd, "198.51.100.1").status)
+        assertEquals(HttpStatusCode.TooManyRequests, check(jd, "198.51.100.2").status)
+    }
+
+    @Test
     fun withoutAnInviteListTheWaitlistJustSaysSignIn() = withApp {
         val client = createClient { install(ContentNegotiation) { json(apiJson) } }
         assertFalse(client.get("/site").body<SiteDto>().inviteOnly)
