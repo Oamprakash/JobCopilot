@@ -19,7 +19,16 @@ import java.util.UUID
 
 /** What the public pages need to know: whether sign-up is open or invite-only. */
 @Serializable
-data class SiteDto(val inviteOnly: Boolean, val googleClientId: String? = null)
+data class SiteDto(val inviteOnly: Boolean, val googleClientId: String? = null, val stats: SiteStatsDto? = null)
+
+/** Real counts for the home page, refreshed every few minutes. */
+@Serializable
+data class SiteStatsDto(val openJobs: Int, val companies: Int, val newToday: Int)
+
+private object StatsCache {
+    @Volatile var value: SiteStatsDto? = null
+    @Volatile var at: java.time.Instant = java.time.Instant.EPOCH
+}
 
 @Serializable
 data class JoinWaitlistRequest(val email: String, val note: String? = null, val acquisition: com.applycopilot.core.Acquisition? = null)
@@ -52,7 +61,14 @@ internal suspend fun Deps.mayRequestLink(email: String): Boolean =
 
 /** Public: site info and joining the waitlist. Mount outside authenticate. */
 fun Route.waitlistPublicRoutes(deps: Deps) {
-    get("/site") { call.respond(SiteDto(deps.inviteOnly(), deps.google?.clientId)) }
+    get("/site") {
+        val now = java.time.Instant.now()
+        if (StatsCache.value == null || StatsCache.at.isBefore(now.minusSeconds(600))) {
+            runCatching { deps.db.tx { c -> com.applycopilot.db.SiteStats.read(c) } }
+                .onSuccess { StatsCache.value = SiteStatsDto(it.openJobs, it.companies, it.newToday); StatsCache.at = now }
+        }
+        call.respond(SiteDto(deps.inviteOnly(), deps.google?.clientId, StatsCache.value))
+    }
 
     post("/waitlist") {
         call.requireSameOrigin(deps.config)

@@ -423,7 +423,8 @@ export const api = {
   adminUsers: (q: string, offset = 0) =>
     request<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   adminUser: (id: string) => request<AdminUserDetail>(`/admin/users/${id}`),
-  site: () => request<{ inviteOnly: boolean; googleClientId?: string | null }>("/site"),
+  site: () =>
+    request<{ inviteOnly: boolean; googleClientId?: string | null; stats?: { openJobs: number; companies: number; newToday: number } | null }>("/site"),
   googleSignIn: (credential: string) => request<Me>("/auth/google", { method: "POST", body: json({ credential }) }),
   joinWaitlist: (email: string, note?: string, acquisition?: Acquisition) =>
     request<{ status: WaitlistStatus }>("/waitlist", { method: "POST", body: json({ email, note: note || null, acquisition: acquisition ?? null }) }),

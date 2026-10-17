@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { PreferencesForm } from "@/components/PreferencesForm";
@@ -15,6 +16,7 @@ type Step = "upload" | "review" | "done";
 
 export default function OnboardingPage() {
   const me = useMe();
+  const router = useRouter();
   const [step, setStep] = useState<Step>("upload");
   const [upload, setUpload] = useState<Upload | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -59,7 +61,8 @@ export default function OnboardingPage() {
       clearHandoff();
       await api.savePreferences(preferences);
       setVersion(saved.version);
-      setStep("done");
+      // Straight to the first matches: that's where a new user sees what the app is for.
+      router.replace("/feed?welcome=1");
     } catch (e) {
       setError(e);
       window.scrollTo({ top: 0, behavior: "smooth" });

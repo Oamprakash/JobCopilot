@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { PartialDescriptionNote, SourceAttribution } from "@/components/SourceAttribution";
 import { Problems } from "@/components/Problems";
 import { FeedSkeleton, MatchingBanner, MatchingProgress } from "@/components/MatchingProgress";
+import { FirstTailorPrompt } from "@/components/FirstTailorPrompt";
 import {
   api,
   ApiError,
@@ -55,6 +56,11 @@ export default function FeedPage() {
   }, []);
   // One automatic rebuild per visit when the profile or preferences changed since the last run.
   const autoRefreshed = useRef(false);
+  // Arriving from onboarding (?welcome=1): the first-application prompt says hello.
+  const [welcome, setWelcome] = useState(false);
+  useEffect(() => {
+    setWelcome(new URLSearchParams(window.location.search).get("welcome") === "1");
+  }, []);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -225,6 +231,7 @@ export default function FeedPage() {
           <Problems error={error} />
 
           {refreshing && feed && feed.jobs.length > 0 && <MatchingBanner />}
+          {status === "new" && !refreshing && feed && feed.jobs.length > 0 && <FirstTailorPrompt job={feed.jobs[0]} welcome={welcome} />}
 
           {refreshing && status === "new" && (!feed || feed.jobs.length === 0) ? (
             <MatchingProgress />

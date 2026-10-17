@@ -52,6 +52,7 @@ const faqs = [
 export function LandingPage() {
   const router = useRouter();
   const [inviteOnly, setInviteOnly] = useState(true);
+  const [stats, setStats] = useState<{ openJobs: number; companies: number; newToday: number } | null>(null);
 
   useEffect(() => {
     api
@@ -60,7 +61,10 @@ export function LandingPage() {
       .catch(() => undefined);
     api
       .site()
-      .then((s) => setInviteOnly(s.inviteOnly))
+      .then((s) => {
+        setInviteOnly(s.inviteOnly);
+        setStats(s.stats ?? null);
+      })
       .catch(() => undefined);
   }, [router]);
 
@@ -111,6 +115,25 @@ export function LandingPage() {
           <FitCheck inviteOnly={inviteOnly} />
         </section>
 
+        {stats && stats.openJobs >= 100 && (
+          <section className="landing-stats" aria-label="Live numbers">
+            <div>
+              <strong>{stats.openJobs.toLocaleString("en-IN")}</strong>
+              <span>open jobs we check for matches</span>
+            </div>
+            <div>
+              <strong>{stats.companies.toLocaleString("en-IN")}</strong>
+              <span>companies hiring</span>
+            </div>
+            {stats.newToday > 0 && (
+              <div>
+                <strong>{stats.newToday.toLocaleString("en-IN")}</strong>
+                <span>new in the last 24 hours</span>
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="landing-promises" aria-label="Our promises">
           <span>Never invents experience</span>
           <span>You always press Submit</span>
@@ -152,6 +175,21 @@ export function LandingPage() {
               <li key={w}>{w}</li>
             ))}
           </ul>
+        </section>
+
+        <section className="landing-section landing-founder" aria-labelledby="founder-title">
+          <div className="landing-founder-card">
+            <span className="landing-founder-avatar" aria-hidden="true">{brand.founder.name.slice(0, 1)}</span>
+            <div className="stack" style={{ gap: 12 }}>
+              <h2 id="founder-title" style={{ margin: 0 }}>Why I built {brand.name}</h2>
+              {brand.founder.note.map((p) => (
+                <p key={p.slice(0, 24)}>{p}</p>
+              ))}
+              <p className="landing-founder-sign">
+                <strong>{brand.founder.name}</strong> · {brand.founder.role}
+              </p>
+            </div>
+          </div>
         </section>
 
         <section className="landing-section">
