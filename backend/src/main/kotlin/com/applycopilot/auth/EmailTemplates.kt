@@ -66,17 +66,24 @@ object EmailTemplates {
 
     fun digest(appName: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String): EmailContent {
         val site = siteOf(feedLink)
-        val intro = if (total == 1) "One new job fits your profile today." else "$total new jobs fit your profile today. Here are the best ${items.size}."
-        val rows = items.joinToString("") { jobRow(it) }
-        val body = heading(if (total == 1) "A new match for you" else "Your new matches") +
+        val best = items.first()
+        val intro = if (total == 1) "One strong new match today." else "$total strong new matches today. This one fits best."
+        val rest = items.drop(1)
+        val rows = rest.joinToString("") { jobRow(it) }
+        val body = heading("Your best match today") +
             paragraph(intro) +
-            """<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:8px 0 4px">$rows</table>""" +
-            button(if (total > items.size) "See all $total matches" else "Open your matches", feedLink) +
-            paragraph("Tailor an application in a couple of minutes. You review everything, and you always click Submit yourself.", small = true)
+            featuredJob(best) +
+            button("Tailor this one", best.link) +
+            (if (rest.isEmpty()) "" else
+                """<p style="margin:8px 0 8px;font:600 14px/1.5 $FONT;color:$INK">More new matches</p>""" +
+                    """<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:0 0 4px">$rows</table>""") +
+            (if (total <= 1) "" else
+                """<p style="margin:4px 0 20px;font:400 14px/1.5 $FONT"><a href="${attr(feedLink)}" style="color:$PRIMARY;font-weight:600">${if (total > items.size) "See all $total matches" else "Open your matches"} &rarr;</a></p>""") +
+            paragraph("Tailoring takes a couple of minutes. You review everything, and you always click Submit yourself.", small = true)
         return EmailContent(
-            subject = digestSubject(total),
-            html = layout(appName, site, preheader = intro, body = body,
-                footer = """You get this at most once a day, only when there are new matches. """ +
+            subject = digestSubject(items, total),
+            html = layout(appName, site, preheader = "${best.score} fit: ${best.title} at ${best.company}." + if (total > 1) " Plus ${total - 1} more new." else "", body = body,
+                footer = """You get this at most once a day, only when there are strong new matches. """ +
                     """<a href="${attr(unsubscribeLink)}" style="color:$MUTED;text-decoration:underline">Unsubscribe</a> """ +
                     """or turn it off under Preferences."""),
             text = digestText(items, total, feedLink, unsubscribeLink),
@@ -155,6 +162,26 @@ $footer<br>${esc(appName)}${if (siteLink.isNotEmpty()) " · $siteLink" else ""}
             """<a href="${attr(href)}" style="color:$PRIMARY;word-break:break-all">${esc(href)}</a></p>"""
 
     private fun divider() = """<div style="height:1px;background:$LINE;margin:4px 0 16px;line-height:1px;font-size:0">&nbsp;</div>"""
+
+    /** The day's best match, larger: score on the left, title and company on the right. */
+    private fun featuredJob(job: DigestItem): String {
+        val (fg, bg) = scoreColours(job.score)
+        val meta = listOf(job.company, job.location).filter { it.isNotBlank() }.joinToString(" · ")
+        return """<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:4px 0 8px">""" +
+            """<tr><td style="padding:18px;border:1px solid $LINE;border-radius:12px;background:#ffffff">""" +
+            """<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>""" +
+            """<td width="64" valign="middle" style="width:64px"><div style="width:64px;height:64px;border-radius:12px;background:$bg;color:$fg;text-align:center;font:800 24px/64px $FONT">${job.score}</div></td>""" +
+            """<td valign="middle" style="padding-left:16px"><a href="${attr(job.link)}" style="font:700 17px/1.35 $FONT;color:$INK;text-decoration:none">${esc(job.title)}</a>""" +
+            """<div style="font:400 14px/1.5 $FONT;color:$MUTED;padding-top:3px">${esc(meta)}</div>""" +
+            """<div style="font:600 12px/1.5 $FONT;color:$fg;padding-top:2px">${job.score} out of 100 fit</div></td>""" +
+            """</tr></table></td></tr></table>"""
+    }
+
+    private fun scoreColours(score: Int): Pair<String, String> = when {
+        score >= 75 -> "#0e7a4f" to "#e3f5ec"
+        score >= 55 -> "#8a5100" to "#fff3dc"
+        else -> MUTED to "#f0f2f5"
+    }
 
     private fun jobRow(job: DigestItem): String {
         val (fg, bg) = when {

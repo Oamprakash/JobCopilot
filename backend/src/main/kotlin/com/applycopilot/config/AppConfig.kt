@@ -57,6 +57,8 @@ data class AppConfig(
     val fitCheckAiDailyLimit: Int = 40,
     /** OAuth client ID for "Continue with Google" (GOOGLE_CLIENT_ID); unset hides the button. */
     val googleClientId: String? = null,
+    /** Only matches scoring at least this go in the morning email (DIGEST_MIN_SCORE); no strong match, no email. */
+    val digestMinScore: Int = 55,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -99,6 +101,7 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                digestMinScore = (env["DIGEST_MIN_SCORE"]?.toIntOrNull() ?: 55).coerceIn(0, 100),
                 googleClientId = env["GOOGLE_CLIENT_ID"]?.trim()?.takeIf { it.endsWith(".apps.googleusercontent.com") },
                 fitCheckDailyLimit = env["FIT_CHECK_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 300,
                 fitCheckAiDailyLimit = env["FIT_CHECK_AI_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 40,

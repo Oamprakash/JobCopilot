@@ -32,12 +32,27 @@ interface Mailer {
     suspend fun sendDigest(email: String, items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String)
 }
 
-internal fun digestSubject(total: Int) = if (total == 1) "1 new job match for you today" else "$total new job matches for you today"
+/**
+ * Leads with the best match, so the subject alone says whether to open it: "86 fit · Senior Android Engineer at
+ * Flipkart + 3 more". Long titles are shortened to keep it readable on a phone.
+ */
+internal fun digestSubject(items: List<DigestItem>, total: Int): String {
+    val best = items.firstOrNull() ?: return if (total == 1) "1 new job match for you today" else "$total new job matches for you today"
+    val title = if (best.title.length > 48) best.title.take(45).trimEnd() + "…" else best.title
+    val company = if (best.company.isBlank()) "" else " at ${best.company.take(30)}"
+    val more = (total - 1).takeIf { it > 0 }?.let { " + $it more" }.orEmpty()
+    return "${best.score} fit · $title$company$more"
+}
 
 internal fun digestText(items: List<DigestItem>, total: Int, feedLink: String, unsubscribeLink: String): String = buildString {
-    appendLine(if (total == 1) "One new job fits your profile:" else "$total new jobs fit your profile. The best ${items.size}:")
-    appendLine()
-    items.forEach { appendLine("• ${it.title} at ${it.company}${if (it.location.isNotBlank()) " (${it.location})" else ""}, fit ${it.score}\n  ${it.link}") }
+    items.firstOrNull()?.let { best ->
+        appendLine("Your best match today: ${best.title} at ${best.company}, fit ${best.score}")
+        appendLine("Tailor it: ${best.link}")
+        appendLine()
+    }
+    if (items.size > 1) appendLine(if (total - 1 == 1) "One more new match:" else "${total - 1} more new matches. The best ${items.size - 1}:")
+    if (items.size > 1) appendLine()
+    items.drop(1).forEach { appendLine("• ${it.title} at ${it.company}${if (it.location.isNotBlank()) " (${it.location})" else ""}, fit ${it.score}\n  ${it.link}") }
     appendLine()
     appendLine("See all your matches: $feedLink")
     appendLine()

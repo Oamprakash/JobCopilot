@@ -412,7 +412,7 @@ class TailorApiTest {
     }
 
     @Test
-    fun dailyMatchEmailAndUnsubscribe() = withApp { deps ->
+    fun dailyMatchEmailAndUnsubscribe() = withApp(mapOf("DIGEST_MIN_SCORE" to "40")) { deps ->
         val client = newClient()
         client.onboardAndFeed()
         assertTrue(client.get("/preferences").body<Preferences>().dailyDigest, "on by default")

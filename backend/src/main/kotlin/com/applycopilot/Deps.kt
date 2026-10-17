@@ -49,7 +49,7 @@ class Deps(
     val autocomplete = AutocompleteService(db)
     val digests = DigestService(
         db, mailer, config.webBaseUrl, config.jwtSecret,
-        zone = java.time.ZoneId.of(config.digestTimeZone), hour = config.digestHour,
+        zone = java.time.ZoneId.of(config.digestTimeZone), hour = config.digestHour, minScore = config.digestMinScore,
     )
 
     override fun close() = onClose.forEach { runCatching { it.close() } }

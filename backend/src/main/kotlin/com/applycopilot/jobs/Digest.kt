@@ -23,7 +23,7 @@ class DigestService(
     private val secret: String,
     private val zone: ZoneId = ZoneId.of("Asia/Kolkata"),
     private val hour: Int = 8,
-    private val minScore: Int = 40,
+    private val minScore: Int = 55,
     private val maxJobs: Int = 5,
 ) {
     private val log = LoggerFactory.getLogger(DigestService::class.java)
