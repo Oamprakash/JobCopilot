@@ -13,6 +13,10 @@ data class MagicLinkResponse(val ok: Boolean, val devLink: String? = null)
 @Serializable
 data class VerifyRequest(val token: String)
 
+/** The ID token ("credential") Google Identity Services gives the browser. */
+@Serializable
+data class GoogleSignInRequest(val credential: String)
+
 @Serializable
 data class MeResponse(val id: String, val email: String, val plan: String, val hasProfile: Boolean, val isAdmin: Boolean = false)
 

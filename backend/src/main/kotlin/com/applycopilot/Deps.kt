@@ -42,6 +42,8 @@ class Deps(
     /** The public fit check on the home page; rule-based only unless [create] gives it Claude. */
     val fitCheck: com.applycopilot.tailoring.FitCheckService =
         com.applycopilot.tailoring.FitCheckService(db, parsing, null, config.fitCheckDailyLimit, 0),
+    /** "Continue with Google", when GOOGLE_CLIENT_ID is set. */
+    val google: com.applycopilot.auth.GoogleSignIn? = null,
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
     val autocomplete = AutocompleteService(db)
@@ -79,6 +81,7 @@ class Deps(
                 tailor = TailorService(db, claudeTailor, config.freeTailorLimit),
                 interviewPrep = InterviewPrepService(db, config.anthropicApiKey?.let { ClaudeInterviewPrep(http, it, config.claudeModel) }),
                 fitCheck = com.applycopilot.tailoring.FitCheckService(db, parsing, claudeTailor, config.fitCheckDailyLimit, config.fitCheckAiDailyLimit),
+                google = config.googleClientId?.let { com.applycopilot.auth.GoogleSignIn(http, it) },
                 onClose = listOf(db, http),
             )
         }

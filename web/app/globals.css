@@ -507,3 +507,8 @@ details.notice summary::marker { color: var(--warn); }
 }
 .landing-try h2 { font-size: clamp(24px, 3vw, 30px); letter-spacing: -0.015em; margin: 0; }
 .landing-try .fitcheck-line p:not(.bullet-original), .landing-try .reasons li { color: var(--ink); }
+
+/* Sign-in */
+.google-button { display: flex; justify-content: center; }
+.or-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }

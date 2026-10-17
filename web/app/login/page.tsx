@@ -4,6 +4,7 @@ import Link from "next/link";
 import { brand } from "@/lib/brand";
 import { useEffect, useState, type FormEvent } from "react";
 import { Logo } from "@/components/AppHeader";
+import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Problems } from "@/components/Problems";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { ApiError, api } from "@/lib/api";
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [devLink, setDevLink] = useState<string | null>(null);
   const [notInvited, setNotInvited] = useState(false);
+  const [googleShown, setGoogleShown] = useState(false);
 
   // Invite emails link here with ?email=, so the address is already filled in.
   useEffect(() => {
@@ -75,8 +77,16 @@ export default function LoginPage() {
         <form className="card stack" onSubmit={submit}>
           <h1>Sign in</h1>
           <p className="muted" style={{ margin: 0 }}>
-            No password. We&apos;ll email you a one-time link.
+            No password needed.
           </p>
+          <GoogleSignIn
+            onShown={setGoogleShown}
+            onNotInvited={(googleEmail) => {
+              if (googleEmail) setEmail(googleEmail);
+              setNotInvited(true);
+            }}
+          />
+          {googleShown && <div className="or-divider" role="separator">or</div>}
           <label className="field">
             Email
             <input

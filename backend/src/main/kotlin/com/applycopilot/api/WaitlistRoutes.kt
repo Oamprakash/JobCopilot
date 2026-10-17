@@ -19,7 +19,7 @@ import java.util.UUID
 
 /** What the public pages need to know: whether sign-up is open or invite-only. */
 @Serializable
-data class SiteDto(val inviteOnly: Boolean)
+data class SiteDto(val inviteOnly: Boolean, val googleClientId: String? = null)
 
 @Serializable
 data class JoinWaitlistRequest(val email: String, val note: String? = null, val acquisition: com.applycopilot.core.Acquisition? = null)
@@ -52,7 +52,7 @@ internal suspend fun Deps.mayRequestLink(email: String): Boolean =
 
 /** Public: site info and joining the waitlist. Mount outside authenticate. */
 fun Route.waitlistPublicRoutes(deps: Deps) {
-    get("/site") { call.respond(SiteDto(deps.inviteOnly())) }
+    get("/site") { call.respond(SiteDto(deps.inviteOnly(), deps.google?.clientId)) }
 
     post("/waitlist") {
         call.requireSameOrigin(deps.config)

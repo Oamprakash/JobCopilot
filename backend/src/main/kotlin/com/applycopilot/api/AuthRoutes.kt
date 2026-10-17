@@ -70,6 +70,25 @@ fun Route.authRoutes(deps: Deps) {
             call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile, user.email in deps.config.adminEmails))
         }
 
+        // "Continue with Google": the same invite rules as email links, and the same session afterwards.
+        post("/google") {
+            call.requireSameOrigin(deps.config)
+            val google = deps.google ?: throw ApiException(HttpStatusCode.NotFound, "Google sign-in isn't set up")
+            val request = call.receive<GoogleSignInRequest>()
+            val email = google.verifiedEmail(request.credential)?.let { Emails.normalize(it) }
+                ?: throw ApiException(HttpStatusCode.Unauthorized, "Google couldn't confirm that sign-in. Try again, or use your email instead.")
+            if (!deps.mayRequestLink(email)) {
+                throw ApiException(HttpStatusCode.Forbidden, "${deps.config.appName} is invite-only for now. Join the waitlist and we'll email you when you're in.")
+            }
+            val (user, hasProfile) = deps.db.tx { c ->
+                val user = Users.findOrCreate(c, email)
+                Events.record(c, user.id, EventTypes.SIGNED_IN, data = Events.data("method" to "google"))
+                user to Profiles.exists(c, user.id)
+            }
+            call.setSessionCookie(deps.config, deps.jwt.issue(user.id), deps.jwt.lifetimeSeconds)
+            call.respond(MeResponse(user.id.toString(), user.email, user.plan, hasProfile, user.email in deps.config.adminEmails))
+        }
+
         post("/logout") {
             call.requireSameOrigin(deps.config)
             call.clearSessionCookie(deps.config)

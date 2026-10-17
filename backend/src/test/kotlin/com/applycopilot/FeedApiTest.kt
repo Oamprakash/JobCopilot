@@ -85,6 +85,16 @@ class FeedApiTest {
                     adzunaCalls += request.url
                     respond(BoardFixtures.adzuna, HttpStatusCode.OK, json)
                 }
+                "oauth2.googleapis.com" -> {
+                    val token = request.url.parameters["id_token"].orEmpty()
+                    val email = token.substringAfter("email=", "").substringBefore(";")
+                    if (!token.startsWith("good")) respond("""{"error":"invalid_token"}""", HttpStatusCode.BadRequest, json)
+                    else respond(
+                        """{"iss":"https://accounts.google.com","aud":"${if (token.contains("otherapp")) "other.apps.googleusercontent.com" else "test-client.apps.googleusercontent.com"}",
+                           "email":"$email","email_verified":"${!token.contains("unverified")}","exp":"${java.time.Instant.now().epochSecond + 600}"}""",
+                        HttpStatusCode.OK, json,
+                    )
+                }
                 "himalayas.app" -> {
                     himalayasCalls += request.url
                     respond(BoardFixtures.himalayas, HttpStatusCode.OK, json)
@@ -414,6 +424,26 @@ class FeedApiTest {
         client.put("/preferences") { contentType(ContentType.Application.Json); setBody(prefs) }
         assertFalse(client.post("/feed/refresh?weak=true").body<FeedResponse>().jobs.any { it.source == "himalayas" })
         assertEquals(HttpStatusCode.NotFound, admin.get("/admin/sources/indeed").status)
+    }
+
+    @Test
+    fun continueWithGoogleSignsInVerifiedEmailsOnly() = withApp(
+        mapOf("GOOGLE_CLIENT_ID" to "test-client.apps.googleusercontent.com", "PUBLIC_PREVIEW" to "true", "INVITE_EMAILS" to "friend@example.com"),
+    ) { _ ->
+        val client = newClient()
+        assertEquals("test-client.apps.googleusercontent.com", client.get("/site").body<com.applycopilot.api.SiteDto>().googleClientId)
+        suspend fun google(token: String) = client.post("/auth/google") {
+            contentType(ContentType.Application.Json)
+            setBody(com.applycopilot.api.GoogleSignInRequest(token.padEnd(120, 'x')))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, google("bad-token").status)
+        assertEquals(HttpStatusCode.Unauthorized, google("good;otherapp;email=friend@example.com;").status, "a token for another app is refused")
+        assertEquals(HttpStatusCode.Unauthorized, google("good;unverified;email=friend@example.com;").status)
+        assertEquals(HttpStatusCode.Forbidden, google("good;email=stranger@example.com;").status, "invite rules apply as for email links")
+        val me = google("good;email=Friend@Example.com;")
+        assertEquals(HttpStatusCode.OK, me.status)
+        assertEquals("friend@example.com", me.body<com.applycopilot.api.MeResponse>().email)
+        assertEquals(HttpStatusCode.OK, client.get("/me").status, "the session cookie is set")
     }
 
     @Test

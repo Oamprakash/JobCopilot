@@ -55,6 +55,8 @@ data class AppConfig(
     /** Home-page fit checks a day in all (FIT_CHECK_DAILY), and how many of those may use Claude (FIT_CHECK_AI_DAILY). */
     val fitCheckDailyLimit: Int = 300,
     val fitCheckAiDailyLimit: Int = 40,
+    /** OAuth client ID for "Continue with Google" (GOOGLE_CLIENT_ID); unset hides the button. */
+    val googleClientId: String? = null,
 ) {
     val isProd: Boolean get() = env == "prod"
 
@@ -97,6 +99,7 @@ data class AppConfig(
                 schedulerEnabled = env["SCHEDULER_ENABLED"]?.toBoolean() ?: (appEnv != "test"),
                 freeTailorLimit = env["FREE_TAILOR_LIMIT"]?.toInt() ?: 5,
                 adzuna = adzunaConfig(env),
+                googleClientId = env["GOOGLE_CLIENT_ID"]?.trim()?.takeIf { it.endsWith(".apps.googleusercontent.com") },
                 fitCheckDailyLimit = env["FIT_CHECK_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 300,
                 fitCheckAiDailyLimit = env["FIT_CHECK_AI_DAILY"]?.toIntOrNull()?.coerceAtLeast(0) ?: 40,
                 himalayasDailyCalls = env["HIMALAYAS_DAILY_CALLS"]?.toIntOrNull()?.coerceAtLeast(0) ?: 120,
