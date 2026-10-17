@@ -111,11 +111,6 @@ export function LandingPage() {
           <FitCheck inviteOnly={inviteOnly} />
         </section>
 
-        <section id="start" className="landing-section landing-start">
-          <h2>{inviteOnly ? "Or join the waitlist" : "Or start straight away"}</h2>
-          <div className="landing-cta">{cta}</div>
-        </section>
-
         <section className="landing-promises" aria-label="Our promises">
           <span>Never invents experience</span>
           <span>You always press Submit</span>
@@ -171,7 +166,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-final">
+        <section id="start" className="landing-final">
           <h2>{inviteOnly ? "Get your invite" : "Start your search"}</h2>
           <p className="muted">{inviteOnly ? "We're letting people in a few at a time during the beta." : "Free during the beta. Takes about three minutes to set up."}</p>
           <div className="landing-cta">{cta}</div>
