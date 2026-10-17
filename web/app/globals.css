@@ -512,3 +512,12 @@ details.notice summary::marker { color: var(--warn); }
 .google-button { display: flex; justify-content: center; }
 .or-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
 .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+/* Hero call to action and preview on phones */
+.landing-try-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.job-card .score { align-self: flex-start; }
+@media (max-width: 640px) {
+  .landing-try-cta { flex-direction: column; align-items: stretch; text-align: center; }
+  .landing-try-cta .btn { width: 100%; }
+  .landing-preview .job-body { flex-basis: 100%; }
+}

@@ -92,7 +92,7 @@ export function LandingPage() {
               {brand.name} finds well-matched jobs every morning, tailors your resume and cover letter from your real experience, and
               fills in the application form. You check everything and press Submit yourself.
             </p>
-            <div className="landing-cta">
+            <div className="landing-try-cta">
               <a href="#try" className="btn btn-primary">Check a job against my resume</a>
               <span className="muted small">Free, no sign-up, about a minute</span>
             </div>
