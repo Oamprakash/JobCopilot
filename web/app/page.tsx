@@ -18,10 +18,22 @@ const structuredData = {
   sameAs: [brand.instagram],
 };
 
+/** Who runs the site, with the logo search engines may show next to it. */
+const organization = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: brand.name,
+  url: brand.siteUrl,
+  logo: `${brand.siteUrl}/logo-512.png`,
+  email: brand.contactEmail,
+  sameAs: [brand.instagram],
+};
+
 export default function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
       <LandingPage />
     </>
   );

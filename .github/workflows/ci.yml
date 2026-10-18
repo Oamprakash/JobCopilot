@@ -113,6 +113,9 @@ jobs:
           curl -fsS http://localhost:10000/ | grep -q 'property="og:image"' || fail "Home page has no link preview image"
           curl -fsS http://localhost:10000/ | grep -q 'application/ld+json' || fail "Home page has no structured data"
           curl -fsS http://localhost:10000/jobs | grep -q "Tech jobs in India" || fail "Job index page did not render"
+          curl -fsS -o /dev/null http://localhost:10000/favicon.ico || fail "favicon.ico missing"
+          curl -fsS -o /dev/null http://localhost:10000/logo-512.png || fail "logo-512.png missing"
+          curl -fsS http://localhost:10000/ | grep -q 'rel="icon"' || fail "Home page has no icon links"
           curl -fsS http://localhost:10000/sitemap.xml | grep -q "<loc>https://trulyapply.com/jobs</loc>" || fail "sitemap.xml has no job pages"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/jobs/plumber-jobs-in-nowhere)" = "404" || fail "Unknown job page should be 404"
           code=$(curl -s -o /tmp/ml.json -w '%{http_code}' -X POST http://localhost:10000/api/auth/magic-link \
