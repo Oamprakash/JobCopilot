@@ -14,7 +14,7 @@ const ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-office
  * The home page's "try it" box: a resume and a pasted job in, a fit score, the skills that match and the ones
  * missing, and a few of the visitor's own lines tailored for the job out. No account needed and nothing is kept.
  */
-export function FitCheck({ inviteOnly }: { inviteOnly: boolean }) {
+export function FitCheck({ inviteOnly, job }: { inviteOnly: boolean; job?: { id: string; label: string } | null }) {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -38,11 +38,11 @@ export function FitCheck({ inviteOnly }: { inviteOnly: boolean }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!file) return setError("Add your resume first (PDF or Word).");
-    if (description.trim().length < MIN_DESCRIPTION) return setError("Paste the whole job description: what the role does and what it asks for.");
+    if (!job && description.trim().length < MIN_DESCRIPTION) return setError("Paste the whole job description: what the role does and what it asks for.");
     setBusy(true);
     setError(null);
     try {
-      const r = await api.fitCheck(file, description.trim(), title.trim() || undefined);
+      const r = await api.fitCheck(file, job ? "" : description.trim(), job ? undefined : title.trim() || undefined, job?.id);
       setResult(r);
       saveHandoff({ profile: r.profile, removed: r.removed, fileName: file.name });
       requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -87,6 +87,13 @@ export function FitCheck({ inviteOnly }: { inviteOnly: boolean }) {
         </div>
         <div className="stack" style={{ gap: 8 }}>
           <span className="fitcheck-label">2. The job</span>
+          {job ? (
+            <div className="fitcheck-job">
+              <strong>{job.label}</strong>
+              <span className="small muted">We&apos;ll read the full description from the posting.</span>
+            </div>
+          ) : (
+          <>
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Job title (optional)" aria-label="Job title (optional)" maxLength={120} />
           <textarea
             className="textarea"
@@ -97,6 +104,8 @@ export function FitCheck({ inviteOnly }: { inviteOnly: boolean }) {
             aria-label="Job description"
             maxLength={30000}
           />
+          </>
+          )}
         </div>
         <div className="fitcheck-submit">
           <button type="submit" className="btn btn-primary" disabled={busy}>

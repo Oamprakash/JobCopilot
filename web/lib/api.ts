@@ -355,11 +355,12 @@ export const api = {
   me: () => request<Me>("/me"),
   deleteAccount: () => request<{ ok: boolean }>("/me", { method: "DELETE" }),
 
-  fitCheck: (file: File, description: string, title?: string) => {
+  fitCheck: (file: File, description: string, title?: string, jobId?: string) => {
     const form = new FormData();
     form.append("file", file);
     form.append("description", description);
     if (title) form.append("title", title);
+    if (jobId) form.append("jobId", jobId);
     return request<FitCheckResult>("/try/fit-check", { method: "POST", body: form });
   },
   uploadResume: (file: File) => {

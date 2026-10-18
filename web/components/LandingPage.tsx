@@ -52,6 +52,13 @@ const faqs = [
 export function LandingPage() {
   const router = useRouter();
   const [inviteOnly, setInviteOnly] = useState(true);
+  // Coming from a job page's "Check my fit": that job is already chosen.
+  const [fitJob, setFitJob] = useState<{ id: string; label: string } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("fit");
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) setFitJob({ id, label: (q.get("fitTitle") ?? "The job you picked").slice(0, 160) });
+  }, []);
   const [stats, setStats] = useState<{ openJobs: number; companies: number; newToday: number } | null>(null);
 
   useEffect(() => {
@@ -112,7 +119,7 @@ export function LandingPage() {
               asks for that your resume doesn&apos;t show, and the lines that should lead your resume for it.
             </p>
           </div>
-          <FitCheck inviteOnly={inviteOnly} />
+          <FitCheck inviteOnly={inviteOnly} job={fitJob} />
         </section>
 
         {stats && stats.openJobs >= 100 && (

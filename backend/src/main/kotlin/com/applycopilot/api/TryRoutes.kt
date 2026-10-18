@@ -39,6 +39,7 @@ fun Route.tryRoutes(deps: Deps) {
         var bytes: ByteArray? = null
         var title: String? = null
         var description: String? = null
+        var jobId: String? = null
         try {
             call.receiveMultipart(formFieldLimit = TRY_MULTIPART_LIMIT).forEachPart { part ->
                 when {
@@ -46,6 +47,7 @@ fun Route.tryRoutes(deps: Deps) {
                         bytes = part.provider().readRemaining(TextExtractor.MAX_BYTES.toLong() + 1).readByteArray()
                     part is PartData.FormItem && part.name == "title" -> title = part.value
                     part is PartData.FormItem && part.name == "description" -> description = part.value
+                    part is PartData.FormItem && part.name == "jobId" -> jobId = part.value.trim().take(40)
                 }
                 part.dispose()
             }
@@ -53,6 +55,14 @@ fun Route.tryRoutes(deps: Deps) {
             throw ApiException(HttpStatusCode.PayloadTooLarge, "Resumes must be 5 MB or smaller")
         }
         val data = bytes ?: throw ApiException(HttpStatusCode.BadRequest, "Add your resume (PDF or Word)")
+        // A job from the public job pages can be checked by id instead of pasting its description.
+        val fromPage = if (description.isNullOrBlank() && !jobId.isNullOrBlank()) {
+            deps.publicJobs.forFitCheck(jobId!!) ?: throw ApiException(HttpStatusCode.NotFound, "That job has closed. Paste another job's description instead.")
+        } else null
+        if (fromPage != null) {
+            title = title?.takeIf { it.isNotBlank() } ?: fromPage.first
+            description = fromPage.second
+        }
         val jd = description?.trim()?.replace(Regex("\r\n?"), "\n").orEmpty()
         if (jd.length < MIN_DESCRIPTION) {
             throw ApiException(HttpStatusCode.BadRequest, "Paste the whole job description: what the role does and what it asks for.")

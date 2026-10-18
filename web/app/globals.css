@@ -548,3 +548,22 @@ details.notice summary::marker { color: var(--warn); }
   .first-tailor-actions { width: 100%; }
   .first-tailor-actions .btn-primary { flex: 1; }
 }
+
+/* Public job pages */
+.public-jobs { padding-bottom: 48px; }
+.public-jobs h1 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em; margin: 12px 0 8px; }
+.public-jobs > p { margin-bottom: 24px; }
+.public-role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.public-role-grid h2 { font-size: 17px; margin: 0; }
+.public-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.public-links li { display: flex; justify-content: space-between; gap: 12px; }
+.public-links a { font-weight: 600; }
+.public-cta { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; border-color: var(--primary); background: var(--primary-soft); margin-bottom: 20px; }
+.public-job-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.public-job-list .job-title { font-size: 18px; }
+.public-job-list p.small { color: var(--ink); }
+@media (max-width: 640px) {
+  .public-cta .btn { width: 100%; }
+  .public-job-list .row .btn { flex: 1; }
+}
+.fitcheck-job { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--good); background: var(--good-soft); border-radius: var(--radius-sm); }

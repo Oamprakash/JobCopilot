@@ -447,6 +447,18 @@ class FeedApiTest {
     }
 
     @Test
+    fun publicJobPagesListBoardJobsWithoutSigningIn() = withApp { deps ->
+        deps.ingestion.syncAll()
+        val client = newClient()
+        val index = client.get("/public/jobs").body<com.applycopilot.jobs.PublicIndexDto>()
+        assertTrue(index.totalJobs > 0, "board jobs are public")
+        // Pages need at least 3 jobs; the fixtures have fewer per role and city, so none qualify yet.
+        assertTrue(index.pages.all { it.count >= 3 })
+        assertEquals(HttpStatusCode.NotFound, client.get("/public/jobs/product-designer-jobs-in-kochi").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/public/jobs/../../etc").status)
+    }
+
+    @Test
     fun adzunaCantBeSwitchedOnWithoutKeys() = withApp { _ ->
         val admin = newClient().also { it.signIn("admin@example.com") }
         val status = admin.get("/admin/sources/adzuna").body<SourceStatusDto>()

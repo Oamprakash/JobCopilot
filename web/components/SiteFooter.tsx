@@ -5,6 +5,7 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <span>© {new Date().getFullYear()} {brand.name}</span>
+      <Link href="/jobs">Jobs</Link>
       <Link href="/privacy">Privacy</Link>
       <Link href="/terms">Terms</Link>
       <a href={`mailto:${brand.contactEmail}`}>Contact</a>

@@ -47,6 +47,7 @@ class Deps(
     private val onClose: List<AutoCloseable> = emptyList(),
 ) : AutoCloseable {
     val autocomplete = AutocompleteService(db)
+    val publicJobs = com.applycopilot.jobs.PublicJobs(db)
     val digests = DigestService(
         db, mailer, config.webBaseUrl, config.jwtSecret,
         zone = java.time.ZoneId.of(config.digestTimeZone), hour = config.digestHour, minScore = config.digestMinScore,
