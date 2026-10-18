@@ -16,6 +16,8 @@ kotlin {
 }
 
 repositories {
+    // See settings.gradle.kts: the Google mirror first, then Maven Central.
+    maven("https://maven-central.storage-download.googleapis.com/maven2/")
     mavenCentral()
 }
 
