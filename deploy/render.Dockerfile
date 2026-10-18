@@ -4,7 +4,10 @@
 FROM gradle:8.14.3-jdk21 AS api
 WORKDIR /src
 COPY backend/ .
-RUN gradle buildFatJar --no-daemon -q
+# One JVM with a fixed heap (Kotlin compiles inside Gradle rather than in a second daemon), so the build fits
+# Render's build machine; plain output so a failure shows its reason in the deploy log.
+RUN gradle buildFatJar --no-daemon --console=plain --warning-mode=none \
+    -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=512m" -Pkotlin.compiler.execution.strategy=in-process
 
 FROM node:20-slim AS web
 WORKDIR /web
