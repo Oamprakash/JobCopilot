@@ -25,6 +25,8 @@ async function get<T>(path: string): Promise<T | null> {
   }
 }
 
+export type Insights = { role: string | null; total: number; updatedAt: string; skills: { name: string; count: number }[]; places: { name: string; count: number }[] };
+export const publicInsights = (role?: string) => get<Insights>(`/public/insights${role ? `?role=${encodeURIComponent(role)}` : ""}`);
 export const publicIndex = () => get<PublicIndex>("/public/jobs");
 export const publicPage = (slug: string) => get<PublicPageDetail>(`/public/jobs/${encodeURIComponent(slug)}`);
 

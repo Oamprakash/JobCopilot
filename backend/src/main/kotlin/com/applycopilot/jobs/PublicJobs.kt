@@ -25,6 +25,13 @@ data class PublicJobDto(
 )
 
 @Serializable
+data class CountedDto(val name: String, val count: Int)
+
+/** What open jobs ask for: how many of [total] jobs mention each skill, and where they are. From live data. */
+@Serializable
+data class InsightsDto(val role: String?, val total: Int, val updatedAt: String, val skills: List<CountedDto>, val places: List<CountedDto>)
+
+@Serializable
 data class PublicIndexDto(val updatedAt: String, val totalJobs: Int, val pages: List<PublicPageDto>)
 
 @Serializable
@@ -47,6 +54,43 @@ class PublicJobs(private val db: Db, private val ttl: Duration = Duration.ofHour
     private class Snapshot(val at: Instant, val rows: Map<String, Row>, val pages: Map<String, List<Row>>, val total: Int)
 
     @Volatile private var snapshot: Snapshot? = null
+    private val insightsCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Instant, InsightsDto>>()
+
+    /**
+     * Skills and places across open board jobs for one role ([roleSlug], e.g. "android-developer") or every role the
+     * job pages know. Null for an unknown role. Cached for 6 hours; reads full descriptions, so not on every request.
+     */
+    suspend fun insights(roleSlug: String?): InsightsDto? {
+        val role = roleSlug?.let { slug -> JobPages.roles.firstOrNull { it.slug == slug } ?: return null }
+        val key = role?.slug ?: "*"
+        insightsCache[key]?.takeIf { it.first.isAfter(Instant.now().minus(Duration.ofHours(6))) }?.let { return it.second }
+        val jobs = db.tx { c ->
+            c.prepareStatement(
+                """
+                SELECT j.title, j.location, j.remote, j.description
+                FROM jobs j JOIN companies co ON co.id = j.company_id
+                WHERE j.closed_at IS NULL AND co.active AND co.ats IN ('greenhouse', 'lever', 'ashby', 'workable', 'smartrecruiters')
+                """.trimIndent(),
+            ).use { st ->
+                st.executeQuery().use { rs -> buildList { while (rs.next()) add(listOf(rs.getString(1), rs.getString(2), rs.getBoolean(3).toString(), rs.getString(4).orEmpty())) } }
+            }
+        }.filter { (title) -> if (role != null) role.pattern.containsMatchIn(title) else JobPages.roles.any { it.pattern.containsMatchIn(title) } }
+        val skillCounts = HashMap<String, Int>()
+        val placeCounts = LinkedHashMap<String, Int>()
+        for ((title, location, remote, description) in jobs) {
+            com.applycopilot.core.SkillDictionary.findIn(title + "\n" + Html.toText(description)).toSet().forEach { skillCounts.merge(it, 1, Int::plus) }
+            JobPages.places.filter { it.slug != JobPages.INDIA && it.matches(location, remote.toBoolean()) }.forEach { placeCounts.merge(it.name, 1, Int::plus) }
+        }
+        val dto = InsightsDto(
+            role = role?.name,
+            total = jobs.size,
+            updatedAt = Instant.now().toString(),
+            skills = skillCounts.entries.sortedByDescending { it.value }.take(25).map { CountedDto(it.key, it.value) },
+            places = placeCounts.entries.sortedByDescending { it.value }.map { CountedDto(it.key, it.value) },
+        )
+        insightsCache[key] = Instant.now() to dto
+        return dto
+    }
 
     private suspend fun current(): Snapshot {
         snapshot?.takeIf { it.at.isAfter(Instant.now().minus(ttl)) }?.let { return it }

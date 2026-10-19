@@ -9,6 +9,7 @@ export function PublicHeader() {
       <Link href="/" className="brand"><Logo /> {brand.name}</Link>
       <nav className="row" style={{ gap: 4 }}>
         <Link href="/jobs" className="btn btn-ghost">Jobs</Link>
+        <Link href="/blog" className="btn btn-ghost public-nav-blog">Blog</Link>
         <Link href="/login" className="btn btn-ghost">Sign in</Link>
         <Link href="/#try" className="btn btn-primary landing-bar-cta">Check my fit</Link>
       </nav>

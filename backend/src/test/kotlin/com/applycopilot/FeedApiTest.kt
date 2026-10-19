@@ -456,6 +456,11 @@ class FeedApiTest {
         assertTrue(index.pages.all { it.count >= 3 })
         assertEquals(HttpStatusCode.NotFound, client.get("/public/jobs/product-designer-jobs-in-kochi").status)
         assertEquals(HttpStatusCode.NotFound, client.get("/public/jobs/../../etc").status)
+
+        val insights = client.get("/public/insights?role=android-developer").body<com.applycopilot.jobs.InsightsDto>()
+        assertEquals("Android Developer", insights.role)
+        assertTrue(insights.total > 0 && insights.skills.any { it.name == "Kotlin" }, "Android board jobs mention Kotlin")
+        assertEquals(HttpStatusCode.NotFound, client.get("/public/insights?role=astronaut").status)
     }
 
     @Test
