@@ -186,14 +186,16 @@ export function LandingPage() {
 
         <section className="landing-section landing-founder" aria-labelledby="founder-title">
           <div className="landing-founder-card">
-            <span className="landing-founder-avatar" aria-hidden="true">{brand.founder.name.slice(0, 1)}</span>
+            <span className="landing-founder-avatar" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 28 28"><path d="M8 15l4 4 8-10" stroke="#fff" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
             <div className="stack" style={{ gap: 12 }}>
               <h2 id="founder-title" style={{ margin: 0 }}>Why I built {brand.name}</h2>
               {brand.founder.note.map((p) => (
                 <p key={p.slice(0, 24)}>{p}</p>
               ))}
               <p className="landing-founder-sign">
-                <strong>{brand.founder.name}</strong> · {brand.founder.role}
+                <strong>Founder of {brand.name}</strong> · {brand.founder.role}
               </p>
             </div>
           </div>
