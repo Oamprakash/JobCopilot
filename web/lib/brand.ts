@@ -23,7 +23,7 @@ export const brand = {
   /** Social profiles linked from the footer. */
   instagram: "https://www.instagram.com/trulyapplyhq/",
   /** The person or business that runs the service, as it should appear in the privacy policy and terms. */
-  operator: "Oamprakash R",
+  operator: "TrulyApply",
   /** Courts that handle disputes under the terms. */
   jurisdiction: "Chennai, Tamil Nadu, India",
   /** Terms and privacy policy "last updated" date. */
