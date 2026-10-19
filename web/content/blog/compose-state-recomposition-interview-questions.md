@@ -3,7 +3,7 @@ title: "Jetpack Compose state and recomposition: the interview questions, with a
 description: The Compose state questions Android interviews keep coming back to - remember, hoisting, stability, derivedStateOf, side effects - with short code and what a strong answer sounds like.
 date: 2026-10-19
 author: Oam
-draft: true
+draft: false
 ---
 
 If you're interviewing for an Android role in 2026, expect Compose. And within Compose, expect state: it's where the framework is most different from Views, and where a few minutes of questions show whether someone has shipped Compose screens or only followed tutorials.
