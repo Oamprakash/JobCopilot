@@ -2,7 +2,6 @@
 title: Notice period in India: how to handle it when you apply and when you get an offer
 description: Practical advice on notice periods for tech job seekers in India - how to answer the question, buyouts, early release and what to check before you resign.
 date: 2026-10-19
-author: Oam
 draft: true
 ---
 

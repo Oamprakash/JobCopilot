@@ -35,7 +35,7 @@ export default async function BlogPost({ params }: Props) {
     headline: post.title,
     description: post.description,
     datePublished: post.date,
-    author: { "@type": "Person", name: brand.founder.name, jobTitle: brand.founder.role },
+    author: { "@type": "Organization", name: brand.name, url: brand.siteUrl },
     publisher: { "@type": "Organization", name: brand.name, logo: { "@type": "ImageObject", url: `${brand.siteUrl}/logo-512.png` } },
     mainEntityOfPage: `${brand.siteUrl}/blog/${post.slug}`,
   };
@@ -51,7 +51,7 @@ export default async function BlogPost({ params }: Props) {
         </nav>
         <h1>{post.title}</h1>
         <p className="small muted blog-byline">
-          {brand.founder.name} · {brand.founder.role} · {formatDate(post.date)}
+          {brand.founder.byline} · {formatDate(post.date)}
         </p>
         <article className="prose">
           {blocks.map((b, i) =>

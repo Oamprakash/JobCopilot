@@ -2,7 +2,6 @@
 title: "Jetpack Compose state and recomposition: the interview questions, with answers and code"
 description: The Compose state questions Android interviews keep coming back to - remember, hoisting, stability, derivedStateOf, side effects - with short code and what a strong answer sounds like.
 date: 2026-10-19
-author: Oam
 draft: false
 ---
 

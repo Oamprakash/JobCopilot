@@ -11,7 +11,8 @@ export const brand = {
   contactEmail: "hello@trulyapply.com",
   /** The founder's note on the home page, in his own words. Edit freely; keep it true. */
   founder: {
-    name: "Oam",
+    /** How blog posts are signed. No personal name on the site. */
+    byline: "Founder, Lead engineer",
     role: "Lead Android engineer, Chennai · 12+ years in the industry",
     note: [
       "I've spent over twelve years building Android apps, and these days I lead a team of engineers. When hiring, the same two kinds of application keep coming in: copies of one generic resume, and resumes that stretch the truth. Both get skipped.",

@@ -2,7 +2,6 @@
 title: What tech jobs in India are asking for right now
 description: Live counts from open software jobs at companies hiring in India - which skills they mention most, and which cities they're in. Updated every few hours.
 date: 2026-10-19
-author: Oam
 draft: true
 ---
 

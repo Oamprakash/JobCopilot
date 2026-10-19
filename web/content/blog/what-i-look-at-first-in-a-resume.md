@@ -2,7 +2,6 @@
 title: What I look at in the first 30 seconds of a resume
 description: A lead Android engineer on how resumes actually get read when you're hiring - and the small changes that get yours read past the first screen.
 date: 2026-10-19
-author: Oam
 draft: true
 ---
 

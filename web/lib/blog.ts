@@ -18,7 +18,7 @@ function parse(slug: string, raw: string): Post {
     title: meta.title ?? slug,
     description: meta.description ?? "",
     date: meta.date ?? "2026-01-01",
-    author: meta.author ?? "Oam",
+    author: meta.author ?? "",
     draft: meta.draft === "true",
     body: m?.[2] ?? raw,
   };
