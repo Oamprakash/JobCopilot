@@ -11,7 +11,7 @@ function parse(slug: string, raw: string): Post {
   const meta: Record<string, string> = {};
   for (const line of (m?.[1] ?? "").split("\n")) {
     const kv = line.match(/^([a-zA-Z]+):\s*(.*)$/);
-    if (kv) meta[kv[1]] = kv[2].trim();
+    if (kv) meta[kv[1]] = kv[2].trim().replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
   }
   return {
     slug,

@@ -1,6 +1,6 @@
 /**
- * A small Markdown renderer for the blog's own posts: headings, paragraphs, lists, block quotes, bold, italics,
- * inline code and links. Everything is HTML-escaped first, so a post can't inject markup. Lines like
+ * A small Markdown renderer for the blog's own posts: headings, paragraphs, lists, block quotes, fenced code,
+ * bold, italics, inline code and links. Everything is HTML-escaped first, so a post can't inject markup. Lines like
  * `{{insights role=android-developer}}` or `{{cta}}` become separate blocks the page renders as components.
  */
 export type Block = { kind: "html"; html: string } | { kind: "insights"; role?: string } | { kind: "cta" };
@@ -44,6 +44,17 @@ export function render(markdown: string): { blocks: Block[]; headings: { id: str
       i++;
       continue;
     }
+    // Fenced code: ```kotlin ... ``` (the language is only a label).
+    const fence = line.match(/^```\s*([a-z0-9]*)\s*$/i);
+    if (fence) {
+      const code: string[] = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) code.push(lines[i++]);
+      i++;
+      const lang = fence[1] ? ` data-lang="${esc(fence[1])}"` : "";
+      html.push(`<pre${lang}><code>${esc(code.join("\n"))}</code></pre>`);
+      continue;
+    }
     const heading = line.match(/^(#{2,4})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
@@ -74,7 +85,7 @@ export function render(markdown: string): { blocks: Block[]; headings: { id: str
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i].trim() !== "" && !/^(#{2,4}\s|>|\s*[-*]\s|\s*\d+\.\s|\{\{)/.test(lines[i])) para.push(lines[i++]);
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#{2,4}\s|>|\s*[-*]\s|\s*\d+\.\s|\{\{|```)/.test(lines[i])) para.push(lines[i++]);
     html.push(`<p>${inline(para.join(" "))}</p>`);
   }
   flush();
