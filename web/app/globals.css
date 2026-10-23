@@ -428,6 +428,8 @@ details.notice summary::marker { color: var(--warn); }
 .landing-final h2 { margin-bottom: 8px; }
 .landing-final .muted { margin: 0 0 20px; }
 .landing-final .landing-cta { margin: 0 auto; text-align: left; }
+/* The sign-up button and its note sit centred under the centred heading, the note on its own line. */
+.landing-final .landing-cta > .row { flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; }
 
 @media (max-width: 900px) {
   .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 24px; }
