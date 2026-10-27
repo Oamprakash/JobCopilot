@@ -25,6 +25,10 @@ FROM node:22-slim
 RUN node -e 'const [a,b,c]=process.versions.node.split(".").map(Number); if (a!==22||b<23||(b===23&&c<4)) { console.error("Node "+process.version+" is older than 22.23.4"); process.exit(1) }'
 COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
 ENV JAVA_HOME=/opt/java/openjdk PATH="/opt/java/openjdk/bin:${PATH}"
+# OpenJDK 21.0.13.0.2's list of distrusted certificates, which adds the compromised eMudhra intermediates
+# (CVE-2026-91403). Temurin's 21 images didn't include it yet in October 2026; drop this line once they do.
+# Generated from src/java.base/share/data/blockedcertsconverter/blocked.certs.pem at jdk-21.0.13.0.2-ga.
+COPY deploy/blocked.certs /opt/java/openjdk/lib/security/blocked.certs
 WORKDIR /app
 COPY --from=api /src/build/libs/*-all.jar api.jar
 COPY --from=web /web /app/web
