@@ -9,7 +9,10 @@ COPY backend/ .
 RUN gradle buildFatJar --no-daemon --console=plain --warning-mode=none \
     -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=512m" -Pkotlin.compiler.execution.strategy=in-process
 
-FROM node:20-slim AS web
+# Node 22 (20 is end-of-life and unpatched). The check fails the build if a cached image is older than the
+# October 2026 security release (TLS hostname checks, Brotli, eMudhra certificates).
+FROM node:22-slim AS web
+RUN node -e 'const [a,b,c]=process.versions.node.split(".").map(Number); if (a!==22||b<23||(b===23&&c<4)) { console.error("Node "+process.version+" is older than 22.23.4"); process.exit(1) }'
 WORKDIR /web
 COPY web/package.json ./
 RUN npm install --no-audit --no-fund
@@ -18,7 +21,8 @@ COPY web/ .
 ENV API_URL=http://127.0.0.1:8080 NEXT_TELEMETRY_DISABLED=1
 RUN npm run build && npm prune --omit=dev
 
-FROM node:20-slim
+FROM node:22-slim
+RUN node -e 'const [a,b,c]=process.versions.node.split(".").map(Number); if (a!==22||b<23||(b===23&&c<4)) { console.error("Node "+process.version+" is older than 22.23.4"); process.exit(1) }'
 COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
 ENV JAVA_HOME=/opt/java/openjdk PATH="/opt/java/openjdk/bin:${PATH}"
 WORKDIR /app

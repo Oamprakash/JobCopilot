@@ -102,6 +102,18 @@ jobs:
             -e JWT_SECRET=ci-only-secret-ci-only-secret-ci-only-secret \
             -e ADMIN_EMAILS=admin@example.com \
             jobcopilot
+      - name: Trust store refuses the compromised eMudhra certificates
+        run: |
+          docker run --rm -v "$PWD/deploy/trustcheck:/w" -w /w eclipse-temurin:21-jdk javac -d /w/out TrustCheck.java
+          docker run --rm -v "$PWD/deploy/trustcheck/out:/w" jobcopilot java -cp /w TrustCheck
+          docker run --rm jobcopilot node -e '
+            const bad = ["https://dv-g3b-emudhra.we-have-a-problem.com/", "https://dv-g3b-aaa-emudhra.we-have-a-problem.com/"];
+            (async () => {
+              let ok = true;
+              for (const u of bad) { try { const r = await fetch(u); console.log("VULNERABLE", u, r.status); ok = false } catch (e) { console.log("OK", u, "refused:", e.cause?.code || e.message) } }
+              const g = await fetch("https://www.google.com/"); console.log("google.com answered", g.status);
+              process.exit(ok && g.ok ? 0 : 1);
+            })()'
       - name: Smoke test
         run: |
           fail() { echo "::error title=Render image::$1"; exit 1; }
